@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="style.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+  </head>
+  <body>
+    <div id="app" class="app">
+      <canvas id="particle-canvas" class="particle-canvas">
+        <p>Your browser does not support the canvas element.</p>
+      </canvas>
+    </div>
+    <script type="module" defer>
+      import { Particle, ParticleSystem } from "./src/index.ts";
+      import { TextFrame, ImageFrame } from "./src/frames/.";
+
+      const particleSystem = new ParticleSystem({
+        canvas: document.getElementById("particle-canvas"),
+        maxParticles: 100000,
+      });
+      
+      particleSystem.addFrame(
+        new ImageFrame({
+          src: "/images/nitish.webp",
+          fit: "cover",
+          position: ["center", "middle"],
+          color: [255, 0, , 1],
+          size: 2,
+        })
+      );
+
+      particleSystem.start();
+    </script>
+  </body>
+</html>

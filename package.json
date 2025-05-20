@@ -1,0 +1,38 @@
+{
+  "name": "particlize",
+  "private": true,
+  "version": "0.0.0",
+  "module": "./dist/particlize.es.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/particlize.es.js",
+      "require": "./dist/particlize.umd.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "rimraf build && tsc && vite build && dts-bundle-generator --config ./dts-bundle-generator.config.ts && copyfiles ./package.json build",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^22.10.2",
+    "@types/three": "^0.176.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "copyfiles": "^2.4.1",
+    "dts-bundle-generator": "^9.5.1",
+    "postcss": "^8.4.49",
+    "postcss-scss": "^4.0.9",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.6",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "three": "^0.176.0"
+  }
+}
