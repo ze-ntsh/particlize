@@ -6,14 +6,19 @@
 }
 
 .app { 
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh; /* Full viewport height */
-  width: 100vw; /* Full viewport width */
 }
 
 .particle-canvas {
-  height: 500px;
-  width: 500px;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  display: block;
 }

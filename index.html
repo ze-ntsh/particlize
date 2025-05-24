@@ -15,20 +15,59 @@
     </div>
     <script type="module" defer>
       import { Particle, ParticleSystem } from "./src/index.ts";
-      import { TextFrame, ImageFrame } from "./src/frames/.";
+      import { TextFrame, ImageFrame } from "./src/frames";
 
       const particleSystem = new ParticleSystem({
         canvas: document.getElementById("particle-canvas"),
-        maxParticles: 100000,
       });
-      
-      particleSystem.addFrame(
-        new ImageFrame({
-          src: "/images/nitish.webp",
-          fit: "cover",
-          position: ["center", "middle"],
-          color: [255, 0, , 1],
-          size: 2,
+
+      const textFrame = new TextFrame({
+        text: "Hello, World!",
+        font: "48px sans-serif",
+        color: "#ff0000",
+      });
+
+      const imageFrame = new ImageFrame({
+        image: "https://example.com/image.png",
+      });
+
+      particleSystem.addParticle(
+        new Particle({
+          position: [1, 1, 0],
+          velocity: [0, 0, 0],
+          acceleration: [0, 0, 0],
+          radius: 5,
+          color: "#00ff00",
+        })
+      );
+
+      particleSystem.addParticle(
+        new Particle({
+          position: [1, -1, 0],
+          velocity: [0, 0, 0],
+          acceleration: [0, 0, 0],
+          radius: 5,
+          color: "#00ff00",
+        })
+      );
+
+      particleSystem.addParticle(
+        new Particle({
+          position: [-1, 1, 0],
+          velocity: [0, 0, 0],
+          acceleration: [0, 0, 0],
+          radius: 5,
+          color: "#00ff00",
+        })
+      );
+
+      particleSystem.addParticle(
+        new Particle({
+          position: [-1, -1, 0],
+          velocity: [0, 0, 0],
+          acceleration: [0, 0, 0],
+          radius: 5,
+          color: "#00ff00",
         })
       );
 

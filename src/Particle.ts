@@ -3,27 +3,26 @@ import { ParticleProperties } from "@/types/particleSystem";
 
 export class Particle {
   // Properties
-  origin: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-  position: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-  velocity: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-  acceleration: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
+  origin: Float32Array = new Float32Array(4);
+  position: Float32Array = new Float32Array(4);
+  velocity: Float32Array = new Float32Array(4);
+  acceleration: Float32Array = new Float32Array(4);
+  color: Float32Array = new Float32Array(4);
   size: number = 1;
-  color: THREE.Vector4 = new THREE.Vector4(1, 1, 1, 1); // RGBA
 
   constructor(properties: Partial<ParticleProperties>) {
-    const { origin, position, size, color } = properties;
-    
-    if (position && position.length === 3) {
-      // Convert to GL coordinates
-      
+    let { origin, position, size, color, velocity, acceleration } = properties;
 
-      this.position.fromArray(position);
+    if (position && position.length === 3) {
+      this.position.set(position);
+      this.position[3] = 1.0;
     }
-    
+
     if (origin && origin.length === 3) {
-      this.origin.fromArray(origin);
+      this.origin.set(origin);
+      this.origin[3] = 1.0;
     } else {
-      this.origin.copy(this.position);
+      this.origin.set(this.position);
     }
 
     if (size) {
@@ -31,7 +30,15 @@ export class Particle {
     }
 
     if (color && color.length === 4) {
-      this.color.fromArray(color);
+      this.color.set(color);
+    }
+
+    if (velocity && velocity.length === 3) {
+      this.velocity.set(velocity);
+    }
+
+    if (acceleration && acceleration.length === 3) {
+      this.acceleration.set(acceleration);
     }
   }
 }
