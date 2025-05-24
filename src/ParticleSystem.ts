@@ -68,12 +68,13 @@ export class ParticleSystem {
     this.canvas.height = this.canvas.clientHeight;
 
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+    this.renderer.setClearColor(0x000000, 0);
     this.renderer.setSize(this.canvas.width, this.canvas.height);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.scene = new THREE.Scene();
     const aspect = this.canvas.width / this.canvas.height;
-    this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
     this.camera.position.set(0, 0, 5);
     this.camera.lookAt(0, 0, 0);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -205,13 +206,68 @@ export class ParticleSystem {
   }
 
   async addFrame(frame: Frame) {
-    const particles = await frame.generateParticles({
-      width: this.canvas.clientWidth,
-      height: this.canvas.clientHeight,
-    });
+    // const particles = await frame.generateParticles({
+    //   width: this.canvas.clientWidth,
+    //   height: this.canvas.clientHeight,
+    // });
+
+    // this.addParticles(particles);
+    // console.log(this.particleCount);
+
+    // Create a sphere geometry
+    // Sample the cube geometry's vertices and turn them into particles
+    // Randomly sample 10,000 particles from the surface of a cube
+    const particles: Particle[] = [];
+    const size = 1; // Cube size (length of one side)
+    const half = size / 2;
+    const numParticles = 10000;
+
+    for (let i = 0; i < numParticles; i++) {
+      // Randomly pick a face: 0-5 (each face of the cube)
+      const face = Math.floor(Math.random() * 6);
+      let pos: [number, number, number];
+
+      // Random u, v in [-0.5, 0.5]
+      const u = Math.random() - 0.5;
+      const v = Math.random() - 0.5;
+
+      switch (face) {
+      case 0: // +X face
+        pos = [half, u * size, v * size];
+        break;
+      case 1: // -X face
+        pos = [-half, u * size, v * size];
+        break;
+      case 2: // +Y face
+        pos = [u * size, half, v * size];
+        break;
+      case 3: // -Y face
+        pos = [u * size, -half, v * size];
+        break;
+      case 4: // +Z face
+        pos = [u * size, v * size, half];
+        break;
+      case 5: // -Z face
+        pos = [u * size, v * size, -half];
+        break;
+      default:
+        pos = [0, 0, 0];
+      }
+
+      const velocity = [0, 0, 0];
+      const acceleration = [0, 0, 0];
+      particles.push(
+      new Particle({
+        position: pos,
+        velocity: velocity,
+        acceleration: acceleration,
+        color: frame.color,
+        size: frame.size,
+      })
+      );
+    }
 
     this.addParticles(particles);
-    console.log(this.particleCount);
   }
 
   update() {

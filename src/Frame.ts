@@ -36,7 +36,7 @@ export abstract class Frame {
         if (alpha > 0) {
           particles.push(
             new Particle({
-              position: [x, y, 0],
+              position: [x/dimensions.width, -y/dimensions.height, 0],
               color: this.color,
               size: this.size,
             })
