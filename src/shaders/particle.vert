@@ -9,5 +9,5 @@ void main() {
   vUv = uv;
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-  gl_PointSize = 1.0;
+  gl_PointSize = 2.0;
 }

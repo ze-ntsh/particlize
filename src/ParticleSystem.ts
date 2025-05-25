@@ -137,6 +137,7 @@ export class ParticleSystem {
     this.renderGeometry = new THREE.BufferGeometry();
     this.renderGeometry.setAttribute("uv", new THREE.BufferAttribute(this.uvs, 2));
     this.renderGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(this.maxParticles * 3), 4)); // Placeholder for positions (dummy but required)
+    this.renderer.compile(this.scene, this.camera);
 
     this.particles = new THREE.Points(this.renderGeometry, this.renderMaterial);
     this.scene.add(this.particles);
@@ -198,18 +199,6 @@ export class ParticleSystem {
     this.particleCount += particles.length;
   }
 
-  removeParticle(index: number) {
-    // Check if the index is valid
-    if (index < 0 || index >= this.particleCount) {
-      console.warn("Invalid particle index");
-      return;
-    }
-
-    // Remove the particle from the FBOs
-
-    this.particleCount--;
-  }
-
   addMesh(sampler: Sampler, samples: number = 100000, offset: [number, number, number] = [0, 0, 0]) {
     if (!sampler) {
       console.warn("No sampler provided");
@@ -237,6 +226,63 @@ export class ParticleSystem {
     this.FBOs.getFBO("position")?.inject(positionData, this.particleCount);
     this.particleCount += samples;
   }
+
+  // Morph
+  morph(target: Particle[]) {
+    // Check if we can add more particles
+    if (target.length > this.maxParticles) {
+      console.warn("Max particle count reached");
+      return;
+    }
+
+    if (target.length < this.particleCount) {
+      // Create a new array with the same size as the particle count
+      const originData = new Float32Array(this.particleCount * 4);
+
+      // Repeat the target origins to fill the particle count
+      for (let i = 0; i < this.particleCount; i++) {
+        const particle = target[i % target.length];
+        originData.set([particle.position[0], particle.position[1], particle.position[2], 1.0], i * 4);
+      }
+
+      // Inject the data into the FBOs
+      this.FBOs.getFBO("origin")?.inject(originData, 0);
+      this.FBOs.update(["origin"]);
+
+      // Prune the extra particles
+      setTimeout(() => {
+        const prunedData = new Float32Array((this.particleCount - target.length) * 4).fill(0);
+        this.FBOs.inject(
+          {
+            origin: prunedData,
+            position: prunedData,
+            velocity: prunedData,
+            acceleration: prunedData,
+          },
+          target.length
+        );
+
+        this.particleCount = target.length;
+      }, 10000);
+    } else {
+      // Create a new array with the same size as the target
+      const originData = new Float32Array(target.length * 4);
+
+      // Copy the target origins to the new array
+      for (let i = 0; i < target.length; i++) {
+        const particle = target[i];
+        originData.set([particle.position[0], particle.position[1], particle.position[2], 1.0], i * 4);
+      }
+
+      // Inject the data into the FBOs
+      this.FBOs.getFBO("origin")?.inject(originData, 0);
+      this.FBOs.update(["origin"]);
+    }
+  }
+
+  // Stubs
+  addForce() {}
+  addConstraint() {}
 
   update() {
     // Update logic

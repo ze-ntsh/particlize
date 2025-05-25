@@ -2,24 +2,9 @@
   "name": "particlize",
   "version": "0.0.0",
   "type": "module",
-  "exports": {
-    ".": {
-      "import": "./index.js",
-      "require": "./index.cjs",
-      "types": "./index.d.ts"
-    },
-    "./samplers": {
-      "import": "./samplers/index.js",
-      "require": "./samplers/index.cjs",
-      "types": "./samplers/index.d.ts"
-    },
-    "./utils": {
-      "import": "./utils/index.js",
-      "require": "./utils/index.cjs",
-      "types": "./utils/index.d.ts"
-    }
-  },
+  "description": "A library for creating particle systems in Three.js",
   "scripts": {
+    "dev": "vite --host",
     "clean": "rimraf build",
     "build:js": "vite build",
     "build:types": "dts-bundle-generator --config dts-bundle-generator.config.ts",

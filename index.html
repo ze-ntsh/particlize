@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Particlize</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <canvas id="particle-canvas">
+        <p>Your browser does not support the HTML5 canvas element.</p>
+      </canvas>
+    </div>
+  </body>
+
+  <script type="module">
+    import { ParticleSystem, Particle } from "./src";
+    import { textToMesh } from "./src/utils";
+    import { MeshSurfaceSampler } from "./src/Samplers";
+    import * as THREE from "three";
+
+    const canvas = document.getElementById("particle-canvas");
+
+    const ps = new ParticleSystem({
+      canvas: canvas,
+      preWarm: true,
+      maxParticles: 100000,
+    });
+
+    ps.addMesh(
+      new MeshSurfaceSampler(
+        await textToMesh({
+          text: "Particlize",
+          fontURL: "https://components.ai/api/v1/typefaces/montserrat/normal/500",
+          depth: 0.5,
+        })
+      ),
+      10000
+    );
+
+    const cubeParticles = [];
+    for (let i = 0; i < 100000; i++) {
+      cubeParticles.push(
+        new Particle({
+          position: [Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1],
+        })
+      );
+    }
+
+    ps.start();
+
+    setTimeout(() => {
+      ps.morph(cubeParticles);
+    }, 2000);
+  </script>
+</html>

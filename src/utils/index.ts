@@ -26,7 +26,7 @@ export const textToMesh = async (
 
   // Set default properties
   geometryProps.size = geometryProps?.size || 1;
-  geometryProps.depth = geometryProps.depth || 0;
+  geometryProps.depth = geometryProps.depth || 0.2;
   geometryProps.curveSegments = geometryProps?.curveSegments || 12;
   geometryProps.bevelEnabled = geometryProps?.bevelEnabled || false;
   geometryProps.bevelThickness = geometryProps?.bevelThickness || 0.1;

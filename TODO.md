@@ -1,0 +1,14 @@
+- [ ] Switch from acceleration to force and mass
+- [ ] Add a way to set the mass of the object
+- [ ] Add a way to add forces to the system
+- [ ] Morphing
+- [ ] Add postprocessing
+- [ ] Allow users to set custom properties
+- [ ] Allow for custom shaders wherever possible
+- [ ] Add a way to set the color of the particles (maps, textures, etc.)
+- [ ] Add a line constraint (draws lines between particles). Can be applied between any two particles
+- [ ] Allow for users to be able to access random particles and change their properties
+- [ ] Make forces toggleable
+- [ ] Add more samplers for meshes
+- [ ] Mouse events
+- [ ] Add a way to maybe group particles. Physics becomes easier ? (center of mass, etc.)

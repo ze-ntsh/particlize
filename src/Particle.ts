@@ -14,6 +14,8 @@ export class Particle {
       size: number;
       color: number[];
       velocity: number[];
+      // mass: number;
+      // force: number[];
       acceleration: number[];
     }>
   ) {

@@ -104,6 +104,15 @@ export class FBOManager {
     }
   }
 
+  inject(data: Record<string, Float32Array>, offset: number = 0) {
+    for (const [name, fbo] of this.fbos) {
+      const dataArray = data[name];
+      if (dataArray) {
+        fbo.inject(dataArray, offset);
+      }
+    }
+  }
+
   updateAll() {
     this.update(Array.from(this.fbos.keys()));
   }
