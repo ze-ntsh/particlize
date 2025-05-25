@@ -97,8 +97,8 @@ export class ParticleSystem {
     // FBOs
     this.FBOs.addFBO({
       name: "origin",
-      vertexShader: positionVertex,
-      fragmentShader: positionFragment,
+      vertexShader: originVertex,
+      fragmentShader: originFragment,
     });
     this.FBOs.addFBO({
       name: "position",
@@ -215,7 +215,10 @@ export class ParticleSystem {
       console.warn("No sampler provided");
       return;
     }
+
+    // @ts-expect-error: sampler may not have build method in some implementations
     sampler.build();
+
     const positionData = new Float32Array(samples * 4);
 
     const targetPosition = new THREE.Vector3();

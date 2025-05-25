@@ -1,6 +1,3 @@
-import * as THREE from "three";
-import { ParticleProperties } from "@/types/particleSystem";
-
 export class Particle {
   // Properties
   origin: Float32Array = new Float32Array(4);
@@ -10,7 +7,16 @@ export class Particle {
   color: Float32Array = new Float32Array(4);
   size: number = 1;
 
-  constructor(properties: Partial<ParticleProperties>) {
+  constructor(
+    properties: Partial<{
+      origin: number[];
+      position: number[];
+      size: number;
+      color: number[];
+      velocity: number[];
+      acceleration: number[];
+    }>
+  ) {
     let { origin, position, size, color, velocity, acceleration } = properties;
 
     if (position && position.length === 3) {

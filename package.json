@@ -1,21 +1,30 @@
 {
   "name": "particlize",
-  "private": true,
   "version": "0.0.0",
-  "module": "./dist/particlize.es.js",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/particlize.es.js",
-      "require": "./dist/particlize.umd.js"
+      "import": "./index.js",
+      "require": "./index.cjs",
+      "types": "./index.d.ts"
+    },
+    "./samplers": {
+      "import": "./samplers/index.js",
+      "require": "./samplers/index.cjs",
+      "types": "./samplers/index.d.ts"
+    },
+    "./utils": {
+      "import": "./utils/index.js",
+      "require": "./utils/index.cjs",
+      "types": "./utils/index.d.ts"
     }
   },
-  "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "vite --host",
-    "build": "rimraf build && tsc && vite build && dts-bundle-generator --config ./dts-bundle-generator.config.ts && copyfiles ./package.json build",
-    "test": "vitest",
-    "test:coverage": "vitest --coverage"
+    "clean": "rimraf build",
+    "build:js": "vite build",
+    "build:types": "dts-bundle-generator --config dts-bundle-generator.config.ts",
+    "build": "npm run clean && npm run build:js && npm run build:types",
+    "postbuild": "node scripts/postbuild.js"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",

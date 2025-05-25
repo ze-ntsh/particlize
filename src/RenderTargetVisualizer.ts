@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { FBO } from "@/FBO";
 
 export class RenderTargetVisualizer {
   scene: THREE.Scene;

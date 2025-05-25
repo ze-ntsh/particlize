@@ -1,9 +1,25 @@
 const config = {
+  compilationOptions: {
+    preferredConfigPath: "./tsconfig.json",
+  },
   entries: [
     {
       filePath: "./src/index.ts",
-      outFile: "./build/dist/index.d.ts",
+      outFile: "./build/index.d.ts",
       noCheck: false,
+      output: { exportReferencedTypes: false },
+    },
+    {
+      filePath: "./src/samplers/index.ts",
+      outFile: "./build/samplers/index.d.ts",
+      noCheck: false,
+      output: { exportReferencedTypes: false },
+    },
+    {
+      filePath: "./src/utils/index.ts",
+      outFile: "./build/utils/index.d.ts",
+      noCheck: false,
+      output: { exportReferencedTypes: false },
     },
   ],
 };
