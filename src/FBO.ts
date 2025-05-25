@@ -2,6 +2,7 @@ import * as THREE from "three";
 
 export class FBO {
   // FBO properties
+  name: string;
   height: number;
   width: number;
   renderer: THREE.WebGLRenderer;
@@ -11,14 +12,23 @@ export class FBO {
 
   // Scene
   scene: THREE.Scene = new THREE.Scene();
-  camera: THREE.OrthographicCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+  camera: THREE.OrthographicCamera;
 
-  constructor(height: number, width: number, renderer: THREE.WebGLRenderer, material: THREE.ShaderMaterial) {
+  constructor(
+    name: string,
+    width: number,
+    height: number,
+    renderer: THREE.WebGLRenderer,
+    camera: THREE.OrthographicCamera,
+    material: THREE.ShaderMaterial
+  ) {
     // Constructor properties
+    this.name = name;
     this.height = height;
     this.width = width;
     this.renderer = renderer;
     this.material = material;
+    this.camera = camera;
 
     this.read = new THREE.WebGLRenderTarget(this.width, this.height, {
       minFilter: THREE.NearestFilter,
@@ -38,10 +48,7 @@ export class FBO {
     this.scene.add(quadMesh);
   }
 
-  update(uniforms: { [key: string]: any }) {
-    // Update the simulation material uniforms
-    Object.assign(this.material.uniforms, uniforms);
-
+  update() {
     // Render the scene to write target
     this.renderer.setRenderTarget(this.write);
     this.renderer.render(this.scene, this.camera);
@@ -116,5 +123,10 @@ export class FBO {
     this.read.texture.needsUpdate = true;
   }
 
-  show() {}
+  dispose() {
+    this.read.dispose();
+    this.write.dispose();
+    this.material.dispose();
+    this.scene.removeFromParent();
+  }
 }

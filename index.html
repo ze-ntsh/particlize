@@ -9,33 +9,27 @@
   </head>
   <body>
     <div id="app" class="app">
-      <canvas id="particle-canvas" class="particle-canvas">
+      <canvas id="particle-canvas">
         <p>Your browser does not support the canvas element.</p>
       </canvas>
     </div>
     <script type="module" defer>
       import { Particle, ParticleSystem } from "./src/index.ts";
-      import { TextFrame, ImageFrame } from "./src/frames";
+      import { textToMesh } from "./src/utils";
+      import { MeshSurfaceSampler } from "./src/samplers";
+      import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 
       const particleSystem = new ParticleSystem({
         canvas: document.getElementById("particle-canvas"),
       });
 
-      const textFrame = new TextFrame({
-        content: "Hello, World!",
-        font: {
-          family: "Arial",
-          size: 100,
-          style: "bold",
-        },
-        color: "#ff0000",
-      });
+      const textMesh = await textToMesh({ text: "1,000,000" });
+      const textMest2 = await textToMesh({ text: "PARTICLES" });
+      const sampler = new MeshSurfaceSampler(textMesh);
+      const sampler2 = new MeshSurfaceSampler(textMest2);
 
-      const imageFrame = new ImageFrame({
-        image: "https://example.com/image.png",
-      });
-
-      particleSystem.addFrame(textFrame);
+      particleSystem.addMesh(sampler, 100000, [0, 0.7, 0]);
+      particleSystem.addMesh(sampler2, 100000, [0, -0.7, 0]);
 
       particleSystem.start();
     </script>
