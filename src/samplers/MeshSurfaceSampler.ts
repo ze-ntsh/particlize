@@ -92,7 +92,7 @@ export class MeshSurfaceSampler implements Sampler {
    *
    * @return {MeshSurfaceSampler} A reference to this sampler.
    */
-  build() {
+  build(): this {
     const indexAttribute = this.indexAttribute;
     const positionAttribute = this.positionAttribute;
     const weightAttribute = this.weightAttribute;
@@ -164,7 +164,12 @@ export class MeshSurfaceSampler implements Sampler {
    * @param {Vector2} targetUV -  The target object holding the sampled uv coordinates.
    * @return {MeshSurfaceSampler} A reference to this sampler.
    */
-  sample(targetPosition: THREE.Vector3, targetNormal?: THREE.Vector3, targetColor?: THREE.Color, targetUV?: THREE.Vector2): this {
+  sample(
+    targetPosition: THREE.Vector3,
+    targetNormal?: THREE.Vector3 | null,
+    targetColor?: THREE.Color | null,
+    targetUV?: THREE.Vector2 | null
+  ): this {
     const faceIndex = this._sampleFaceIndex();
     return this._sampleFace(faceIndex, targetPosition, targetNormal, targetColor, targetUV);
   }
@@ -211,9 +216,9 @@ export class MeshSurfaceSampler implements Sampler {
   _sampleFace(
     faceIndex: number,
     targetPosition: THREE.Vector3,
-    targetNormal: THREE.Vector3 | undefined,
-    targetColor: THREE.Color | undefined,
-    targetUV: THREE.Vector2 | undefined
+    targetNormal: THREE.Vector3 | undefined | null,
+    targetColor: THREE.Color | undefined | null,
+    targetUV: THREE.Vector2 | undefined | null
   ) {
     let u = this.randomFunction();
     let v = this.randomFunction();
@@ -244,7 +249,7 @@ export class MeshSurfaceSampler implements Sampler {
       .addScaledVector(_face.b, v)
       .addScaledVector(_face.c, 1 - (u + v));
 
-    if (targetNormal !== undefined) {
+    if (targetNormal) {
       if (this.normalAttribute !== undefined) {
         _face.a.fromBufferAttribute(this.normalAttribute, i0);
         _face.b.fromBufferAttribute(this.normalAttribute, i1);
@@ -260,7 +265,7 @@ export class MeshSurfaceSampler implements Sampler {
       }
     }
 
-    if (targetColor !== undefined && this.colorAttribute !== undefined) {
+    if (targetColor && this.colorAttribute !== undefined) {
       _face.a.fromBufferAttribute(this.colorAttribute, i0);
       _face.b.fromBufferAttribute(this.colorAttribute, i1);
       _face.c.fromBufferAttribute(this.colorAttribute, i2);
@@ -276,7 +281,7 @@ export class MeshSurfaceSampler implements Sampler {
       targetColor.b = _color.z;
     }
 
-    if (targetUV !== undefined && this.uvAttribute !== undefined) {
+    if (targetUV && this.uvAttribute !== undefined) {
       _uva.fromBufferAttribute(this.uvAttribute as THREE.BufferAttribute, i0);
       _uvb.fromBufferAttribute(this.uvAttribute as THREE.BufferAttribute, i1);
       _uvc.fromBufferAttribute(this.uvAttribute as THREE.BufferAttribute, i2);

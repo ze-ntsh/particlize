@@ -4,21 +4,19 @@ import Stats from "three/examples/jsm/libs/stats.module";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 // GLSL
-import originVertex from "@/shaders/origin.vert?raw";
-import originFragment from "@/shaders/origin.frag?raw";
 import particleVertex from "@/shaders/particle.vert?raw";
 import particleFragment from "@/shaders/particle.frag?raw";
-import positionVertex from "@/shaders/position.vert?raw";
-import positionFragment from "@/shaders/position.frag?raw";
-import velocityVertex from "@/shaders/velocity.vert?raw";
-import velocityFragment from "@/shaders/velocity.frag?raw";
-import accelerationVertex from "@/shaders/acceleration.vert?raw";
-import accelerationFragment from "@/shaders/acceleration.frag?raw";
-import { Sampler } from "@/samplers/Sampler";
+
+import originFragment from "@/shaders/origin.frag?raw";
+import positionSizeFragment from "@/shaders/positionSize.frag?raw";
+import forceMassFragment from "@/shaders/forceMass.frag?raw";
+import velocityLifetimeFragment from "@/shaders/velocityLifetime.frag?raw";
+import colorFragment from "@/shaders/color.frag?raw";
 
 import * as THREE from "three";
 import { FBOManager } from "@/FBOManager";
 import { RenderTargetVisualizer } from "@/RenderTargetVisualizer";
+import { Particlizer } from "./Particlizer";
 
 /**
  * @class ParticleSystem
@@ -97,37 +95,45 @@ export class ParticleSystem {
     // FBOs
     this.FBOs.addFBO({
       name: "origin",
-      vertexShader: originVertex,
       fragmentShader: originFragment,
     });
     this.FBOs.addFBO({
-      name: "position",
-      vertexShader: positionVertex,
-      fragmentShader: positionFragment,
+      name: "positionSize",
+      fragmentShader: positionSizeFragment,
     });
     this.FBOs.addFBO({
-      name: "velocity",
-      vertexShader: velocityVertex,
-      fragmentShader: velocityFragment,
+      name: "velocityLifetime",
+      fragmentShader: velocityLifetimeFragment,
       uniforms: {
         uMouse: { value: this.intersectionPoint },
         uMouseRadius: { value: 0.2 },
-        uMouseForce: { value: 10.0 },
+        uMouseForce: { value: 100.0 },
       },
     });
     this.FBOs.addFBO({
-      name: "acceleration",
-      vertexShader: accelerationVertex,
-      fragmentShader: accelerationFragment,
+      name: "forceMass",
+      fragmentShader: forceMassFragment,
     });
+    this.FBOs.addFBO({
+      name: "color",
+      fragmentShader: colorFragment,
+    });
+
+    for (const [name, fbo] of this.FBOs.fbos) {
+      console.log(fbo.textureName);
+      console.log(`Uniforms for FBO "${name}":`, fbo.material.uniforms);
+      if (fbo.read.texture && fbo.read.texture.image && fbo.read.texture.image.data) {
+        console.log(`Data length for FBO "${name}":`, fbo.read.texture.image.data.length);
+      }
+    }
 
     this.renderMaterial = new THREE.ShaderMaterial({
       vertexShader: particleVertex,
       fragmentShader: particleFragment,
       uniforms: {
         uMouse: { value: this.intersectionPoint },
-        uPositionTexture: { value: this.FBOs.fbos.get("position")?.read.texture },
         uResolution: { value: new THREE.Vector2(this.canvas.width, this.canvas.height) },
+        [this.FBOs.get("positionLifetime")?.textureName as string]: { value: this.FBOs.fbos.get("positionLifetime")?.read.texture },
       },
       transparent: true,
       depthWrite: false,
@@ -138,6 +144,9 @@ export class ParticleSystem {
     this.renderGeometry.setAttribute("uv", new THREE.BufferAttribute(this.uvs, 2));
     this.renderGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(this.maxParticles * 3), 4)); // Placeholder for positions (dummy but required)
     this.renderer.compile(this.scene, this.camera);
+
+    // Only render particle count particles
+    // this.renderGeometry.setDrawRange(0, this.particleCount);
 
     this.particles = new THREE.Points(this.renderGeometry, this.renderMaterial);
     this.scene.add(this.particles);
@@ -157,74 +166,15 @@ export class ParticleSystem {
     });
   }
 
-  addParticle(particle: Particle) {
-    // Check if we can add more particles
-    if (this.particleCount >= this.maxParticles) {
-      console.warn("Max particle count reached");
+  addParticles(particlizer: Particlizer) {
+    if (this.particleCount + particlizer.count > this.maxParticles) {
+      console.warn("Max particle count will be reached, cannot add more particles");
       return;
     }
 
-    this.FBOs.getFBO("origin")?.inject(particle.position, this.particleCount);
-    this.FBOs.getFBO("position")?.inject(particle.position, this.particleCount);
-    this.FBOs.getFBO("velocity")?.inject(particle.velocity, this.particleCount);
-    this.FBOs.getFBO("acceleration")?.inject(particle.acceleration, this.particleCount);
-
-    this.particleCount++;
-  }
-
-  addParticles(particles: Particle[]) {
-    if (this.particleCount + particles.length > this.maxParticles) {
-      console.warn("Max particle count reached");
-      return;
-    }
-
-    // Add the particles to the data array
-    let positionData = new Float32Array(particles.length * 4);
-    let velocityData = new Float32Array(particles.length * 4);
-    let accelerationData = new Float32Array(particles.length * 4);
-
-    for (let i = 0; i < particles.length; i++) {
-      const particle = particles[i];
-      positionData.set(particle.position, i * 4);
-      velocityData.set(particle.velocity, i * 4);
-      accelerationData.set(particle.acceleration, i * 4);
-    }
-
-    // Inject the data into the FBOs
-    this.FBOs.getFBO("origin")?.inject(positionData, this.particleCount);
-    this.FBOs.getFBO("position")?.inject(positionData, this.particleCount);
-    this.FBOs.getFBO("velocity")?.inject(velocityData, this.particleCount);
-    this.FBOs.getFBO("acceleration")?.inject(accelerationData, this.particleCount);
-
-    this.particleCount += particles.length;
-  }
-
-  addMesh(sampler: Sampler, samples: number = 100000, offset: [number, number, number] = [0, 0, 0]) {
-    if (!sampler) {
-      console.warn("No sampler provided");
-      return;
-    }
-
-    // @ts-expect-error: sampler may not have build method in some implementations
-    sampler.build();
-
-    const positionData = new Float32Array(samples * 4);
-
-    const targetPosition = new THREE.Vector3();
-    const targetNormal = new THREE.Vector3();
-    const targetColor = new THREE.Color();
-    const targetUV = new THREE.Vector2();
-
-    for (let i = 0; i < samples; i++) {
-      sampler.sample(targetPosition, targetNormal, targetColor, targetUV);
-
-      positionData.set([targetPosition.x + offset[0], targetPosition.y + offset[1], targetPosition.z + offset[2], 1.0], i * 4);
-    }
-
-    // Inject the data into the FBOs
-    this.FBOs.getFBO("origin")?.inject(positionData, this.particleCount);
-    this.FBOs.getFBO("position")?.inject(positionData, this.particleCount);
-    this.particleCount += samples;
+    this.FBOs.inject(particlizer.data, this.particleCount);
+    this.particleCount += particlizer.count;
+    // this.renderGeometry.setDrawRange(0, this.particleCount);
   }
 
   // Morph
@@ -246,7 +196,7 @@ export class ParticleSystem {
       }
 
       // Inject the data into the FBOs
-      this.FBOs.getFBO("origin")?.inject(originData, 0);
+      this.FBOs.get("origin")?.inject(originData, 0);
       this.FBOs.update(["origin"]);
 
       // Prune the extra particles
@@ -275,7 +225,7 @@ export class ParticleSystem {
       }
 
       // Inject the data into the FBOs
-      this.FBOs.getFBO("origin")?.inject(originData, 0);
+      this.FBOs.get("origin")?.inject(originData, 0);
       this.FBOs.update(["origin"]);
     }
   }
@@ -297,13 +247,15 @@ export class ParticleSystem {
       uTime: { value: time },
       uDelta: { value: delta },
     });
-    this.FBOs.setUniforms("velocity", {
+    this.FBOs.setUniforms("velocityLifetime", {
       uMouse: { value: this.intersectionPoint },
     });
-    this.FBOs.update(["position", "velocity", "acceleration"]);
+    this.FBOs.update(["positionSize", "velocityLifetime", "forceMass"]);
 
     // Render
-    this.renderMaterial.uniforms.uPositionTexture.value = this.FBOs.getFBO("position")?.read.texture;
+    this.renderMaterial.uniforms[this.FBOs.get("positionSize")?.textureName as string] = {
+      value: this.FBOs.get("positionSize")?.read.texture,
+    };
     this.renderMaterial.uniforms.uMouse.value = this.intersectionPoint;
 
     // Render the scene

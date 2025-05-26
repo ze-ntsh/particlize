@@ -3,6 +3,7 @@ import * as THREE from "three";
 export class FBO {
   // FBO properties
   name: string;
+  textureName: string;
   height: number;
   width: number;
   renderer: THREE.WebGLRenderer;
@@ -24,6 +25,7 @@ export class FBO {
   ) {
     // Constructor properties
     this.name = name;
+    this.textureName = `u${this.name.charAt(0).toUpperCase() + this.name.slice(1)}Texture`;
     this.height = height;
     this.width = width;
     this.renderer = renderer;

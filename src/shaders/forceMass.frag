@@ -1,13 +1,17 @@
 uniform sampler2D uOriginTexture;
-uniform sampler2D uPositionTexture;
-uniform sampler2D uVelocityTexture;
+uniform sampler2D uPositionSizeTexture;
+uniform sampler2D uVelocityLifetimeTexture;
 varying vec2 vUv;
 
 void main() {
-  vec3 origin = texture2D(uOriginTexture, vUv).xyz;
-  vec3 position = texture2D(uPositionTexture, vUv).xyz;
-  vec3 velocity = texture2D(uVelocityTexture, vUv).xyz;
+  vec4 positionSize = texture2D(uPositionSizeTexture, vUv);
+  vec4 velocityLifetime = texture2D(uVelocityLifetimeTexture, vUv);
 
+  vec3 origin = texture2D(uOriginTexture, vUv).xyz;
+  vec3 position = positionSize.xyz;
+  vec3 velocity = velocityLifetime.xyz;
+
+  // Origin restoring force
   float k = 25.0;   // strong spring for snappiness
   float d = 2.0 * sqrt(k); // critical damping
 

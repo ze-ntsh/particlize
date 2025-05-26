@@ -1,6 +1,6 @@
-uniform sampler2D uVelocityTexture;
-uniform sampler2D uAccelerationTexture;
-uniform sampler2D uPositionTexture;
+uniform sampler2D uVelocityLifetimeTexture;
+uniform sampler2D uForceMassTexture;
+uniform sampler2D uPositionSizeTexture;
 varying vec2 vUv;
 uniform float uDelta;
 uniform vec3 uMouse;           // Mouse position in NDC or world space
@@ -8,9 +8,13 @@ uniform float uMouseRadius;    // Radius of influence (same space as position)
 uniform float uMouseForce;
 
 void main() {
-  vec3 position = texture2D(uPositionTexture, vUv).xyz;
-  vec3 velocity = texture2D(uVelocityTexture, vUv).xyz;
-  vec3 acceleration = texture2D(uAccelerationTexture, vUv).xyz;
+  vec4 positionSize = texture2D(uPositionSizeTexture, vUv);
+  vec4 velocityLifetime = texture2D(uVelocityLifetimeTexture, vUv);
+  vec4 forceMass = texture2D(uForceMassTexture, vUv);
+
+  vec3 acceleration = forceMass.xyz / forceMass.w; // Acceleration from force/mass
+  vec3 position = positionSize.xyz; // Current position
+  vec3 velocity = velocityLifetime.xyz; // Current velocity
 
   // Apply restoring force (from acceleration FBO)
   velocity += acceleration * uDelta;

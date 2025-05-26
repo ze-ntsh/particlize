@@ -1,36 +1,40 @@
 export class Particle {
   // Properties
-  origin: Float32Array = new Float32Array(4);
-  position: Float32Array = new Float32Array(4);
-  velocity: Float32Array = new Float32Array(4);
-  acceleration: Float32Array = new Float32Array(4);
-  color: Float32Array = new Float32Array(4);
-  size: number = 1;
+  origin: [number, number, number] = [0, 0, 0]; // Default origin at the origin of the world
+  position: [number, number, number] = [0, 0, 0]; // Default position at the origin of the world
+  velocity: [number, number, number] = [0, 0, 0]; // Default velocity is zero
+  force: [number, number, number] = [0, 0, 0]; // Default force is zero
+  color: [number, number, number, number] = [0, 0, 0, 1]; // Default color is black with full opacity
+  size: number = 1; // Default size of the particle
+  mass: number = 1; // Default mass of the particle
+  lifetime: number = -1; // Default lifetime is infinite (-1 means it never expires)
 
   constructor(
     properties: Partial<{
-      origin: number[];
-      position: number[];
+      // Vector properties
+      origin: [number, number, number];
+      position: [number, number, number];
+      velocity: [number, number, number];
+      force: [number, number, number];
+
+      // Scalar properties
       size: number;
-      color: number[];
-      velocity: number[];
-      // mass: number;
-      // force: number[];
-      acceleration: number[];
+      mass: number;
+      color: [number, number, number, number];
+      lifetime: number;
     }>
   ) {
-    let { origin, position, size, color, velocity, acceleration } = properties;
+    let { origin, position, velocity, force, mass, size, color, lifetime } = properties;
 
     if (position && position.length === 3) {
-      this.position.set(position);
-      this.position[3] = 1.0;
+      this.position = position;
     }
 
     if (origin && origin.length === 3) {
-      this.origin.set(origin);
-      this.origin[3] = 1.0;
+      this.origin = origin;
     } else {
-      this.origin.set(this.position);
+      // If origin is not provided, set it to the position
+      this.origin = this.position;
     }
 
     if (size) {
@@ -38,15 +42,23 @@ export class Particle {
     }
 
     if (color && color.length === 4) {
-      this.color.set(color);
+      this.color = color;
     }
 
     if (velocity && velocity.length === 3) {
-      this.velocity.set(velocity);
+      this.velocity = velocity;
     }
 
-    if (acceleration && acceleration.length === 3) {
-      this.acceleration.set(acceleration);
+    if (force && force.length === 3) {
+      this.force = force;
+    }
+
+    if (mass) {
+      this.mass = mass;
+    }
+
+    if (lifetime) {
+      this.lifetime = lifetime;
     }
   }
 }
