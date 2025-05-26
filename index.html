@@ -17,7 +17,8 @@
   </body>
 
   <script type="module">
-    import { ParticleSystem, Particle, Particlizer } from "./src";
+    import { ParticleSystem, Particle } from "./src";
+    import { SamplerFrame } from "./src/frames";
     import { textToMesh } from "./src/utils";
     import { MeshSurfaceSampler } from "./src/samplers";
     import * as THREE from "three";
@@ -29,38 +30,33 @@
       canvas: canvas,
       preWarm: true,
       maxParticles: 100000,
+      backgroundColor: [0.0, 0.0, 0.0, 1.0], // Dark background
     });
+    // Create three concentric sphere meshes
+    const sphereRadii = [0.8, 1.5, 2.3]; // Radii for 3 concentric spheres
+    const sphereColors = [
+      0xff0000, // Red (inner)
+      0x00ff00, // Green (middle)
+      0x0000ff, // Blue (outer)
+    ];
 
-    // Generate particles in a sphere shape
+    // Create particles from mesh surfaces
     const sphereParticles = [];
-    const numParticles = 250000;
-    const spikes = 5; // Number of star points
-    const innerRadius = 0.5;
-    const outerRadius = 1.2;
+    const particlesPerSphere = Math.floor(100000 / sphereRadii.length);
 
-    for (let i = 0; i < numParticles; i++) {
-      // Distribute particles around a sphere
-      const u = Math.random();
-      const v = Math.random();
-      const theta = 2 * Math.PI * u;
-      const phi = Math.acos(2 * v - 1);
+    for (let i = 0; i < sphereRadii.length; i++) {
+      // Create sphere geometry and material
+      const geometry = new THREE.SphereGeometry(sphereRadii[i], 32, 32);
+      const material = new THREE.MeshBasicMaterial({ color: sphereColors[i] });
+      const mesh = new THREE.Mesh(geometry, material);
 
-      // Alternate between inner and outer radius to create spikes
-      const spike = Math.floor((theta / (2 * Math.PI)) * spikes * 2);
-      const r = spike % 2 === 0 ? outerRadius : innerRadius + Math.random() * (outerRadius - innerRadius) * 0.2;
-
-      const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.sin(phi) * Math.sin(theta);
-      const z = r * Math.cos(phi);
-
-      sphereParticles.push(
-        new Particle({
-          position: [x, y, z],
+      ps.addParticles(
+        new SamplerFrame({
+          sampler: new MeshSurfaceSampler(mesh),
+          count: particlesPerSphere,
         })
       );
     }
-
-    ps.addParticles(new Particlizer({ particles: sphereParticles }));
 
     // const loader = new GLTFLoader();
     // const loadGLTF = (url) =>

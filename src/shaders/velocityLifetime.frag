@@ -12,7 +12,7 @@ void main() {
   vec4 velocityLifetime = texture2D(uVelocityLifetimeTexture, vUv);
   vec4 forceMass = texture2D(uForceMassTexture, vUv);
 
-  if (forceMass.w < 0.0) {
+  if(forceMass.w < 0.0) {
     discard; // Skip particles with zero mass
     return;
   }
@@ -20,6 +20,14 @@ void main() {
   vec3 acceleration = forceMass.xyz / forceMass.w; // Acceleration from force/mass
   vec3 position = positionSize.xyz; // Current position
   vec3 velocity = velocityLifetime.xyz; // Current velocity
+  float lifetime = velocityLifetime.w; // Current lifetime
+
+  if(lifetime <= 0.0 && lifetime >= -0.999) {
+    discard; // Skip particles with lifetime between 0 and -1. -1 is infinite lifetime
+    return;
+  }
+  
+  lifetime -= uDelta;
 
   // Apply restoring force (from acceleration FBO)
   velocity += acceleration * uDelta;
@@ -34,5 +42,5 @@ void main() {
     velocity.xy += dir * strength * uDelta;
   }
 
-  gl_FragColor = vec4(velocity, 1.0); // Output new velocity and lifetime
+  gl_FragColor = vec4(velocity, lifetime);
 }

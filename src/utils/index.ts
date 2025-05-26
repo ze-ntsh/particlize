@@ -3,7 +3,7 @@ import { TextGeometry, TextGeometryParameters } from "three/examples/jsm/geometr
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader";
 
 export const textToMesh = async (
-  properties: Partial<
+  props: Partial<
     {
       text: string;
       fontURL: string;
@@ -16,7 +16,7 @@ export const textToMesh = async (
     fontURL = "https://components.ai/api/v1/typefaces/montserrat/normal/500",
     color = [0.0, 0.0, 0.0],
     ...geometryProps
-  } = properties;
+  } = props;
 
   const loader = new FontLoader();
 

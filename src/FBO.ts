@@ -4,6 +4,7 @@ export class FBO {
   // FBO properties
   name: string;
   textureName: string;
+  propertyOffsets: Map<string, number>;
   height: number;
   width: number;
   renderer: THREE.WebGLRenderer;
@@ -15,22 +16,24 @@ export class FBO {
   scene: THREE.Scene = new THREE.Scene();
   camera: THREE.OrthographicCamera;
 
-  constructor(
-    name: string,
-    width: number,
-    height: number,
-    renderer: THREE.WebGLRenderer,
-    camera: THREE.OrthographicCamera,
-    material: THREE.ShaderMaterial
-  ) {
+  constructor(props: {
+    name: string;
+    width: number;
+    height: number;
+    renderer: THREE.WebGLRenderer;
+    camera: THREE.OrthographicCamera;
+    material: THREE.ShaderMaterial;
+    propertyOffsets: Map<string, number>;
+  }) {
     // Constructor properties
-    this.name = name;
+    this.name = props.name;
     this.textureName = `u${this.name.charAt(0).toUpperCase() + this.name.slice(1)}Texture`;
-    this.height = height;
-    this.width = width;
-    this.renderer = renderer;
-    this.material = material;
-    this.camera = camera;
+    this.height = props.height;
+    this.width = props.width;
+    this.renderer = props.renderer;
+    this.material = props.material;
+    this.camera = props.camera;
+    this.propertyOffsets = props.propertyOffsets || new Map();
 
     this.read = new THREE.WebGLRenderTarget(this.width, this.height, {
       minFilter: THREE.NearestFilter,

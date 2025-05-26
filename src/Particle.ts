@@ -1,4 +1,5 @@
 export class Particle {
+  [key: string]: any; // Allow dynamic properties for flexibility
   // Properties
   origin: [number, number, number] = [0, 0, 0]; // Default origin at the origin of the world
   position: [number, number, number] = [0, 0, 0]; // Default position at the origin of the world
@@ -10,7 +11,7 @@ export class Particle {
   lifetime: number = -1; // Default lifetime is infinite (-1 means it never expires)
 
   constructor(
-    properties: Partial<{
+    props: Partial<{
       // Vector properties
       origin: [number, number, number];
       position: [number, number, number];
@@ -24,7 +25,7 @@ export class Particle {
       lifetime: number;
     }>
   ) {
-    let { origin, position, velocity, force, mass, size, color, lifetime } = properties;
+    let { origin, position, velocity, force, mass, size, color, lifetime } = props;
 
     if (position && position.length === 3) {
       this.position = position;

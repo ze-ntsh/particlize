@@ -2,6 +2,7 @@
 - [ ] Allow for users to be able to access random particles and change their properties
 - [ ] Add a way to add forces to the system
 - [/] Morphing
+- [ ] Allow linking properties of particles (eg color/size) to other properties (eg velocity)
 - [ ] Add postprocessing
 - [ ] Allow users to set custom properties
 - [ ] Allow for custom shaders wherever possible

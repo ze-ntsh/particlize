@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { FBO } from "./FBO";
 
-type FBOConfig = {
+type FBOProps = {
   name: string;
+  propertyOffsets: Map<string, number>;
   vertexShader?: string;
   fragmentShader: string;
   uniforms?: Record<string, THREE.IUniform>;
@@ -10,6 +11,7 @@ type FBOConfig = {
 
 export class FBOManager {
   fbos: Map<string, FBO> = new Map();
+  propertyToFBOMap: Record<string, [string, number]> = {};
   height: number;
   width: number;
   max: number = 0;
@@ -31,14 +33,14 @@ export class FBOManager {
     this.max = height * width;
   }
 
-  addFBO(config: FBOConfig) {
-    if (this.fbos.has(config.name)) {
-      console.warn(`FBO with name ${config.name} already exists.`);
+  addFBO(props: FBOProps) {
+    if (this.fbos.has(props.name)) {
+      console.warn(`FBO with name ${props.name} already exists.`);
       return;
     }
 
-    config.vertexShader =
-      config.vertexShader ||
+    props.vertexShader =
+      props.vertexShader ||
       /* glsl */ `
         varying vec2 vUv;
         void main() {
@@ -47,23 +49,24 @@ export class FBOManager {
         }
       `;
 
-    const fbo = new FBO(
-      config.name,
-      this.width,
-      this.height,
-      this.renderer,
-      this.camera,
-      new THREE.ShaderMaterial({
-        vertexShader: config.vertexShader,
-        fragmentShader: config.fragmentShader,
+    const fbo = new FBO({
+      name: props.name,
+      width: this.width,
+      height: this.height,
+      renderer: this.renderer,
+      camera: this.camera,
+      propertyOffsets: props.propertyOffsets,
+      material: new THREE.ShaderMaterial({
+        vertexShader: props.vertexShader,
+        fragmentShader: props.fragmentShader,
         uniforms: {
           uTime: { value: 0 },
           uDelta: { value: 0 },
           uTextureResolution: { value: new THREE.Vector2(this.width, this.height) },
         },
-      })
-    );
-    this.fbos.set(config.name, fbo);
+      }),
+    });
+    this.fbos.set(props.name, fbo);
 
     // Set up inter-FBO uniforms by reference
     for (const [otherName, otherFBO] of this.fbos) {
@@ -74,8 +77,17 @@ export class FBOManager {
       }
     }
     // Set initial uniforms
-    if (config.uniforms) {
-      Object.assign(fbo.material.uniforms, config.uniforms);
+    if (props.uniforms) {
+      Object.assign(fbo.material.uniforms, props.uniforms);
+    }
+
+    // Update the property to FBO map
+    for (const [property, offset] of props.propertyOffsets.entries()) {
+      if (this.propertyToFBOMap[property]) {
+        console.warn(`Property ${property} is already mapped to ${this.propertyToFBOMap[property][0]}.`);
+      } else {
+        this.propertyToFBOMap[property] = [props.name, offset];
+      }
     }
   }
 

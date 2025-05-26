@@ -16,9 +16,7 @@ import colorFragment from "@/shaders/color.frag?raw";
 import * as THREE from "three";
 import { FBOManager } from "@/FBOManager";
 import { RenderTargetVisualizer } from "@/RenderTargetVisualizer";
-import { Particlizer } from "./Particlizer";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { MeshSurfaceSampler } from "./samplers";
+import { Frame } from "./frames/Frame";
 
 /**
  * @class ParticleSystem
@@ -45,13 +43,17 @@ export class ParticleSystem {
   maxParticles: number;
   renderTargetVisualizer: RenderTargetVisualizer | null = null;
 
-  // Points
-  renderGeometry: THREE.BufferGeometry;
-  renderMaterial: THREE.ShaderMaterial;
-
   // Particles
+  particleGeometry: THREE.BufferGeometry;
+  particleMaterial: THREE.ShaderMaterial;
   particles: THREE.Points;
   particleCount: number = 0;
+
+  // Lines
+  lineGeometry: THREE.BufferGeometry | null = null;
+  lineMaterial: THREE.LineBasicMaterial | null = null;
+  lines: THREE.LineSegments | null = null;
+  lineCount: number = 0;
 
   // Mouse
   mouse: THREE.Vector2 = new THREE.Vector2(0, 0);
@@ -59,8 +61,8 @@ export class ParticleSystem {
   raycastPlane: THREE.Plane;
   intersectionPoint: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
 
-  constructor(properties: { canvas: HTMLCanvasElement }) {
-    const { canvas } = properties;
+  constructor(props: { canvas: HTMLCanvasElement; backgroundColor?: [number, number, number, number] }) {
+    const { canvas, backgroundColor = [0.1, 0.1, 0.1, 1] } = props;
 
     // Constructor properties
     this.canvas = canvas;
@@ -69,7 +71,7 @@ export class ParticleSystem {
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
-    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.setClearColor(new THREE.Color(...backgroundColor.slice(0, 3)), backgroundColor[3]);
     this.renderer.setSize(this.canvas.width, this.canvas.height);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.scene = new THREE.Scene();
@@ -98,10 +100,15 @@ export class ParticleSystem {
     this.FBOs.addFBO({
       name: "origin",
       fragmentShader: originFragment,
+      propertyOffsets: new Map([["origin", 0]]),
     });
     this.FBOs.addFBO({
       name: "positionSize",
       fragmentShader: positionSizeFragment,
+      propertyOffsets: new Map([
+        ["position", 0],
+        ["size", 3],
+      ]),
     });
     this.FBOs.addFBO({
       name: "velocityLifetime",
@@ -111,23 +118,33 @@ export class ParticleSystem {
         uMouseRadius: { value: 0.2 },
         uMouseForce: { value: 100.0 },
       },
+      propertyOffsets: new Map([
+        ["velocity", 0],
+        ["lifetime", 3],
+      ]),
     });
     this.FBOs.addFBO({
       name: "forceMass",
       fragmentShader: forceMassFragment,
+      propertyOffsets: new Map([
+        ["force", 0],
+        ["mass", 3],
+      ]),
     });
     this.FBOs.addFBO({
       name: "color",
       fragmentShader: colorFragment,
+      propertyOffsets: new Map([["color", 0]]),
     });
 
-    this.renderMaterial = new THREE.ShaderMaterial({
+    this.particleMaterial = new THREE.ShaderMaterial({
       vertexShader: particleVertex,
       fragmentShader: particleFragment,
       uniforms: {
         uMouse: { value: this.intersectionPoint },
         uResolution: { value: new THREE.Vector2(this.canvas.width, this.canvas.height) },
         uPositionSizeTexture: { value: this.FBOs.get("positionSize")?.read.texture },
+        uVelocityLifetimeTexture: { value: this.FBOs.get("velocityLifetime")?.read.texture },
         uColorTexture: { value: this.FBOs.get("color")?.read.texture },
       },
       transparent: true,
@@ -135,15 +152,15 @@ export class ParticleSystem {
     });
 
     // Particles
-    this.renderGeometry = new THREE.BufferGeometry();
-    this.renderGeometry.setAttribute("uv", new THREE.BufferAttribute(this.uvs, 2));
-    this.renderGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(this.maxParticles * 3), 4)); // Placeholder for positions (dummy but required)
+    this.particleGeometry = new THREE.BufferGeometry();
+    this.particleGeometry.setAttribute("uv", new THREE.BufferAttribute(this.uvs, 2));
+    this.particleGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(this.maxParticles * 3), 4)); // Placeholder for positions (dummy but required)
     this.renderer.compile(this.scene, this.camera);
 
     // Only render particle count particles
-    // this.renderGeometry.setDrawRange(0, this.particleCount);
+    this.particleGeometry.setDrawRange(0, this.particleCount);
 
-    this.particles = new THREE.Points(this.renderGeometry, this.renderMaterial);
+    this.particles = new THREE.Points(this.particleGeometry, this.particleMaterial);
     this.scene.add(this.particles);
 
     // Stats
@@ -161,18 +178,19 @@ export class ParticleSystem {
     });
   }
 
-  addParticles(particlizer: Particlizer) {
-    if (this.particleCount + particlizer.count > this.maxParticles) {
+  addParticles(frame: Frame) {
+    if (this.particleCount + frame.count > this.maxParticles) {
       console.warn("Max particle count will be reached, cannot add more particles");
       return;
     }
 
-    this.FBOs.inject(particlizer.data, this.particleCount);
-    this.particleCount += particlizer.count;
-    // this.renderGeometry.setDrawRange(0, this.particleCount);
+    frame.build(this.FBOs.propertyToFBOMap);
+    this.FBOs.inject(frame.data, this.particleCount);
+    this.particleCount += frame.count;
+    this.particleGeometry.setDrawRange(0, this.particleCount);
+    frame.dispose();
   }
 
-  // Morph
   morph(target: Particle[]) {
     // Check if we can add more particles
     if (target.length > this.maxParticles) {
@@ -245,11 +263,12 @@ export class ParticleSystem {
     this.FBOs.setUniforms("velocityLifetime", {
       uMouse: this.intersectionPoint,
     });
-    this.FBOs.update(["forceMass", "velocityLifetime", "positionSize"]);
+    this.FBOs.update(["forceMass", "velocityLifetime", "positionSize", "color"]);
 
     // Render
-    this.renderMaterial.uniforms.uPositionSizeTexture.value = this.FBOs.get("positionSize")?.read.texture;
-    this.renderMaterial.uniforms.uColorTexture.value = this.FBOs.get("color")?.read.texture;
+    this.particleMaterial.uniforms.uPositionSizeTexture.value = this.FBOs.get("positionSize")?.read.texture;
+    this.particleMaterial.uniforms.uColorTexture.value = this.FBOs.get("color")?.read.texture;
+    this.particleMaterial.uniforms.uVelocityLifetimeTexture.value = this.FBOs.get("velocityLifetime")?.read.texture;
 
     // Render the scene
     this.renderer.render(this.scene, this.camera);
