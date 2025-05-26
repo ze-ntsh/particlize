@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Particlize - A 3D particle system visualization" />
+    <meta name="keywords" content="particles, 3D, animation, visualization, WebGL, three.js" />
     <title>Particlize</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -17,8 +19,9 @@
   <script type="module">
     import { ParticleSystem, Particle, Particlizer } from "./src";
     import { textToMesh } from "./src/utils";
-    import { MeshSurfaceSampler } from "./src/Samplers";
+    import { MeshSurfaceSampler } from "./src/samplers";
     import * as THREE from "three";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
     const canvas = document.getElementById("particle-canvas");
 
@@ -30,7 +33,7 @@
 
     // Generate particles in a sphere shape
     const sphereParticles = [];
-    const numParticles = 100000;
+    const numParticles = 250000;
     const spikes = 5; // Number of star points
     const innerRadius = 0.5;
     const outerRadius = 1.2;
@@ -57,11 +60,66 @@
       );
     }
 
-    ps.addParticles(
-      new Particlizer({
-        particles: sphereParticles,
-      })
-    );
+    ps.addParticles(new Particlizer({ particles: sphereParticles }));
+
+    // const loader = new GLTFLoader();
+    // const loadGLTF = (url) =>
+    //   new Promise((resolve, reject) => {
+    //     loader.load(
+    //       url,
+    //       (gltf) => resolve(gltf.scene),
+    //       undefined,
+    //       (error) => reject(error)
+    //     );
+    //   });
+
+    // (async () => {
+    //   try {
+    //     const loadedScene = await loadGLTF("assets/dragon/scene.gltf");
+
+    //     // Log the entire scene structure
+    //     console.log("Loaded scene:", loadedScene);
+    //     console.log("Direct children:", loadedScene.children);
+
+    //     // Recursively find meshes in the scene
+    //     const meshes = [];
+    //     loadedScene.traverse((child) => {
+    //       if (child instanceof THREE.Mesh) {
+    //         meshes.push(child);
+    //         console.log("Found mesh in traversal:", child);
+    //       }
+    //     });
+
+    //     if (meshes.length > 0) {
+    //       console.log("Found meshes:", meshes);
+    //       const mesh = meshes[0]; // Use the first mesh found
+
+    //       // Scale the mesh (zoom)
+    //       mesh.scale.set(1.5, 1.5, 1.5); // Adjust scale factor as needed
+
+    //       // Center the mesh
+    //       const box = new THREE.Box3().setFromObject(mesh);
+    //       const center = box.getCenter(new THREE.Vector3());
+    //       mesh.position.sub(center); // Center the mesh at origin
+
+    //       mesh.rotation.set(0, Math.PI / 2, 0); // Rotate the mesh to face the camera
+
+    //       const sampler = new MeshSurfaceSampler(mesh);
+
+    //       ps.addParticles(
+    //         new Particlizer({
+    //           sampler: sampler,
+    //           texture: "assets/dragon/3DModel_1_BaseColor.jpeg",
+    //           count: 20000,
+    //         })
+    //       );
+    //     } else {
+    //       console.warn("No meshes found in the model");
+    //     }
+    //   } catch (error) {
+    //     console.error("Failed to load GLTF:", error);
+    //   }
+    // })();
 
     ps.start();
   </script>

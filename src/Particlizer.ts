@@ -29,7 +29,7 @@ export class Particlizer {
       this.count = count || this.count;
       this.sampler = sampler;
     } else {
-      console.error("You must provide either a non-empty array of Particles or a valid THREE.Mesh with geometry.");
+      console.error("You must provide either a non-empty array of Particles or a valid Sampler");
     }
 
     this.data = {
@@ -54,10 +54,10 @@ export class Particlizer {
       const offset = index * 4;
       this.data.origin.set(particle.origin, offset);
 
-      this.data.velocityLifetime.set(particle.position, offset);
+      this.data.velocityLifetime.set(particle.velocity, offset);
       this.data.velocityLifetime[offset + 3] = particle.lifetime;
 
-      this.data.positionSize.set(particle.velocity, offset);
+      this.data.positionSize.set(particle.position, offset);
       this.data.positionSize[offset + 3] = particle.size;
 
       this.data.forceMass.set(particle.force, offset);
@@ -82,7 +82,7 @@ export class Particlizer {
       const offset = i * 4;
       this.data.positionSize.set([position.x, position.y, position.z, 1.0], offset);
       this.data.origin.set([position.x, position.y, position.z, 1.0], offset);
-      this.data.color.set([color.r, color.g, color.b, 1.0], offset);
+      this.data.color.set([0.0, 0.0, 0.0, 1.0], offset);
       this.data.velocityLifetime.set([0, 0, 0, -1.0], offset); // Default velocity and lifetime
       this.data.forceMass.set([0, 0, 0, 1.0], offset); // Default force and mass
     }

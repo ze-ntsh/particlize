@@ -13,5 +13,5 @@ void main() {
 
   position += velocity * uDelta;
 
-  gl_FragColor = vec4(position, 1.0);
+  gl_FragColor = vec4(position, positionSize.w);
 }

@@ -104,6 +104,11 @@ export class FBO {
       remainingPixels -= pixelsInRow;
       currentIndex += pixelsInRow;
     }
+
+    // // Console log the read texture data for debugging
+    // const buffer = new Float32Array(this.width * this.height * 4);
+    // this.renderer.readRenderTargetPixels(this.read, 0, 0, this.width, this.height, buffer);
+    // console.log(this.name, this.textureName, this.material.uniforms, "Read Texture Data:", buffer);
   }
 
   remove(index: number) {

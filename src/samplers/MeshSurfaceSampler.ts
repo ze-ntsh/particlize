@@ -42,7 +42,7 @@ const _uva = new THREE.Vector2(),
  *
  * @three_import import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
  */
-export class MeshSurfaceSampler implements Sampler {
+export class MeshSurfaceSampler extends Sampler {
   geometry;
   randomFunction;
   indexAttribute;
@@ -59,6 +59,7 @@ export class MeshSurfaceSampler implements Sampler {
    * @param {Mesh} mesh - Surface mesh from which to sample.
    */
   constructor(mesh: THREE.Mesh) {
+    super();
     this.geometry = mesh.geometry;
     this.randomFunction = Math.random;
 

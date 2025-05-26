@@ -17,6 +17,8 @@ import * as THREE from "three";
 import { FBOManager } from "@/FBOManager";
 import { RenderTargetVisualizer } from "@/RenderTargetVisualizer";
 import { Particlizer } from "./Particlizer";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { MeshSurfaceSampler } from "./samplers";
 
 /**
  * @class ParticleSystem
@@ -119,21 +121,14 @@ export class ParticleSystem {
       fragmentShader: colorFragment,
     });
 
-    for (const [name, fbo] of this.FBOs.fbos) {
-      console.log(fbo.textureName);
-      console.log(`Uniforms for FBO "${name}":`, fbo.material.uniforms);
-      if (fbo.read.texture && fbo.read.texture.image && fbo.read.texture.image.data) {
-        console.log(`Data length for FBO "${name}":`, fbo.read.texture.image.data.length);
-      }
-    }
-
     this.renderMaterial = new THREE.ShaderMaterial({
       vertexShader: particleVertex,
       fragmentShader: particleFragment,
       uniforms: {
         uMouse: { value: this.intersectionPoint },
         uResolution: { value: new THREE.Vector2(this.canvas.width, this.canvas.height) },
-        [this.FBOs.get("positionLifetime")?.textureName as string]: { value: this.FBOs.fbos.get("positionLifetime")?.read.texture },
+        uPositionSizeTexture: { value: this.FBOs.get("positionSize")?.read.texture },
+        uColorTexture: { value: this.FBOs.get("color")?.read.texture },
       },
       transparent: true,
       depthWrite: false,
@@ -244,19 +239,17 @@ export class ParticleSystem {
     this.raycaster.ray.intersectPlane(this.raycastPlane, this.intersectionPoint);
 
     this.FBOs.setUniformsAll({
-      uTime: { value: time },
-      uDelta: { value: delta },
+      uTime: time,
+      uDelta: delta,
     });
     this.FBOs.setUniforms("velocityLifetime", {
-      uMouse: { value: this.intersectionPoint },
+      uMouse: this.intersectionPoint,
     });
-    this.FBOs.update(["positionSize", "velocityLifetime", "forceMass"]);
+    this.FBOs.update(["forceMass", "velocityLifetime", "positionSize"]);
 
     // Render
-    this.renderMaterial.uniforms[this.FBOs.get("positionSize")?.textureName as string] = {
-      value: this.FBOs.get("positionSize")?.read.texture,
-    };
-    this.renderMaterial.uniforms.uMouse.value = this.intersectionPoint;
+    this.renderMaterial.uniforms.uPositionSizeTexture.value = this.FBOs.get("positionSize")?.read.texture;
+    this.renderMaterial.uniforms.uColorTexture.value = this.FBOs.get("color")?.read.texture;
 
     // Render the scene
     this.renderer.render(this.scene, this.camera);

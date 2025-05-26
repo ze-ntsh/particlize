@@ -43,7 +43,7 @@ export class FBOManager {
         varying vec2 vUv;
         void main() {
           vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          gl_Position = vec4(position, 1.0);
         }
       `;
 
@@ -67,11 +67,12 @@ export class FBOManager {
 
     // Set up inter-FBO uniforms by reference
     for (const [otherName, otherFBO] of this.fbos) {
-      fbo.material.uniforms[fbo.textureName] = { value: otherFBO.read.texture };
-      otherFBO.material.uniforms[otherFBO.textureName] = { value: fbo.read.texture };
+      fbo.material.uniforms[otherFBO.textureName] = { value: otherFBO.read.texture };
+      // Also add this FBO's texture as a uniform to the others
+      if (otherName !== fbo.name) {
+        otherFBO.material.uniforms[fbo.textureName] = { value: fbo.read.texture };
+      }
     }
-
-
     // Set initial uniforms
     if (config.uniforms) {
       Object.assign(fbo.material.uniforms, config.uniforms);
@@ -82,14 +83,21 @@ export class FBOManager {
     return this.fbos.get(name);
   }
 
-  setUniforms(name: string, uniforms: Record<string, THREE.IUniform>) {
+  setUniforms(name: string, uniforms: Record<string, any>) {
     const fbo = this.fbos.get(name);
     if (!fbo) return;
+
     // Update the FBO's uniforms
-    Object.assign(fbo.material.uniforms, uniforms);
+    for (const [key, value] of Object.entries(uniforms)) {
+      if (fbo.material.uniforms[key]) {
+        fbo.material.uniforms[key].value = value;
+      } else {
+        fbo.material.uniforms[key] = { value: value };
+      }
+    }
   }
 
-  setUniformsAll(uniformsMap: Record<string, THREE.IUniform>) {
+  setUniformsAll(uniformsMap: Record<string, any>) {
     for (const [name, _] of this.fbos) {
       this.setUniforms(name, uniformsMap);
     }
@@ -100,18 +108,16 @@ export class FBOManager {
       const fbo = this.fbos.get(name);
       if (!fbo) return;
 
-      fbo.update();
-
       // Inter FBO uniforms
       for (const [otherName, otherFBO] of this.fbos) {
-        otherFBO.material.uniforms[fbo.textureName] = { value: fbo.read.texture };
+        fbo.material.uniforms[otherFBO.textureName].value = otherFBO.read.texture;
       }
+
+      fbo.update();
     }
   }
 
   inject(data: Record<string, Float32Array>, offset: number = 0) {
-    console.log("Injecting data into FBOs:", data);
-
     for (const [name, fbo] of this.fbos) {
       const dataArray = data[name];
       if (dataArray) {
