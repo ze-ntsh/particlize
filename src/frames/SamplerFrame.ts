@@ -7,7 +7,6 @@ export class SamplerFrame extends Frame {
   sampler: Sampler;
   constructor({ sampler, count = 0 }: { sampler: Sampler; count?: number }) {
     super();
-
     if (!(sampler instanceof Sampler)) {
       throw new Error("Invalid sampler provided. Must be an instance of Sampler.");
     }
@@ -24,10 +23,15 @@ export class SamplerFrame extends Frame {
 
       this.particles.push(
         new Particle({
-          position: postion.toArray(),
-          color: [Math.random(), Math.random(), Math.random(), 1.0],
+          origin: Float32Array.from(postion.toArray()),
+          position: Float32Array.from(postion.toArray()),
         })
       );
     }
+  }
+
+  dispose(): void {
+    this.particles = [];
+    super.dispose();
   }
 }

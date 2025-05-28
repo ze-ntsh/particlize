@@ -1,10 +1,10 @@
 // Particle System
 import { ParticleSystem } from "@/ParticleSystem";
 import { Particle } from "@/Particle";
-import { FBOManager } from "@/FBOManager";
+import { PropertyManager } from "@/PropertyManager";
 import { FBO } from "@/FBO";
 import { RenderTargetVisualizer } from "@/RenderTargetVisualizer";
 
 console.log("Hello from particlize");
 
-export { ParticleSystem, Particle, FBOManager, FBO, RenderTargetVisualizer };
+export { ParticleSystem, PropertyManager, Particle, FBO, RenderTargetVisualizer };

@@ -12,3 +12,12 @@
 - [ ] Add more samplers for meshes
 - [ ] Mouse events
 - [ ] Add a way to maybe group particles. Physics becomes easier ? (center of mass, etc.)
+
+shader compile 
+
+-- all the uniforms --
+-- int main --
+-- all the textures unpacked --
+-- lifetime discard logic --
+
+-- custom user constraints --

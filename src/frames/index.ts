@@ -1,2 +1,2 @@
-export * from "./ParticleFrame";
+export * from "./Frame";
 export * from "./SamplerFrame";
