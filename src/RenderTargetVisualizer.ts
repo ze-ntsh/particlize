@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 export class RenderTargetVisualizer {
+  uuid: string = crypto.randomUUID();
   scene: THREE.Scene;
   camera: THREE.OrthographicCamera;
   canvas: HTMLCanvasElement;

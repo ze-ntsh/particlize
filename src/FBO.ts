@@ -1,6 +1,20 @@
 import * as THREE from "three";
 import { Property } from "@/Property";
 import { Constraint } from "@/constraints/Constraint";
+import { getUniformType } from "./utils";
+
+// Types
+export type FBOParams = {
+  name: string;
+  width: number;
+  height: number;
+  renderer: THREE.WebGLRenderer;
+  camera: THREE.OrthographicCamera;
+  properties?: Property[];
+  channels?: number;
+};
+
+const formats = [THREE.RedFormat, THREE.RGFormat, THREE.RGBFormat, THREE.RGBAFormat];
 
 export class FBO {
   // FBO properties
@@ -14,6 +28,7 @@ export class FBO {
   properties: Property[] = [];
   dependencies: Set<FBO> = new Set();
   constraints: Constraint[] = [];
+  channels: number = 4; // Default to RGBA
 
   material: THREE.ShaderMaterial = new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
@@ -22,30 +37,43 @@ export class FBO {
   read: THREE.WebGLRenderTarget;
   write: THREE.WebGLRenderTarget;
 
+  injectBuffer: Map<string, Float32Array> = new Map<string, Float32Array>();
+  needsUpdate: boolean = false;
+
   // Scene
   scene: THREE.Scene = new THREE.Scene();
   camera: THREE.OrthographicCamera;
 
-  constructor(props: {
-    name: string;
-    width: number;
-    height: number;
-    renderer: THREE.WebGLRenderer;
-    camera: THREE.OrthographicCamera;
-    properties?: Property[];
-  }) {
+  constructor({
+    name,
+    width,
+    height,
+    renderer,
+    camera,
+    properties = [],
+    channels = 4, // Default to RGBA
+  }: FBOParams) {
     // Constructor properties
-    this.name = props.name;
-    this.textureName = `u${this.name.charAt(0).toUpperCase() + this.name.slice(1)}Texture`;
-    this.height = props.height;
-    this.width = props.width;
-    this.renderer = props.renderer;
-    this.camera = props.camera;
+    this.name = name;
+    this.textureName = `u_${this.name}Texture`;
+    this.height = height;
+    this.width = width;
+    this.renderer = renderer;
+    this.camera = camera;
 
+    // Set channels
+    if (channels) {
+      // clamp channels to 1-4
+      this.channels = Math.max(1, Math.min(channels, 4));
+      // if channels is 3, set it to 4 (THREE.js does not support RGB textures in WebGL2)
+      if (this.channels === 3) {
+        this.channels = 4;
+      }
+    }
     this.read = new THREE.WebGLRenderTarget(this.width, this.height, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
-      format: THREE.RGBAFormat,
+      format: formats[this.channels - 1] || THREE.RGBAFormat,
       type: THREE.FloatType,
       depthBuffer: false,
       stencilBuffer: false,
@@ -55,8 +83,8 @@ export class FBO {
     this.renderer.initRenderTarget(this.write);
 
     // Initialize properties
-    if (props.properties) {
-      this.properties = props.properties;
+    if (properties) {
+      this.properties = properties;
     }
 
     // Self-dependency
@@ -92,27 +120,17 @@ export class FBO {
       // Add uniform for the FBO texture
       this.material.uniforms[dependancyFBO.textureName] = { value: dependancyFBO.read.texture };
 
-      for (const property of dependancyFBO.properties) {
+      for (const property of dependancyFBO.properties.values()) {
         let type = property.size > 1 ? `vec${property.size}` : "float";
         let channels = "xyzw".slice(property.channelOffset, property.channelOffset + property.size);
         propertyUnpacking += `${type} ${property.name} = texture(${dependancyFBO.textureName}, vUv).${channels};\n`;
       }
     }
 
+    console.log(this.material.uniforms);
     for (const uniformName in this.material.uniforms) {
-      let type = "";
       const uniformValue = this.material.uniforms[uniformName].value;
-      if (uniformValue instanceof THREE.Texture) {
-        type = "sampler2D";
-      } else if (uniformValue instanceof THREE.Vector2) {
-        type = "vec2";
-      } else if (uniformValue instanceof THREE.Vector3) {
-        type = "vec3";
-      } else if (uniformValue instanceof THREE.Vector4) {
-        type = "vec4";
-      } else if (typeof uniformValue === "number") {
-        type = "float";
-      }
+      let type = getUniformType(uniformValue);
 
       if (type) {
         uniformString += `uniform ${type} ${uniformName};\n`;
@@ -122,7 +140,19 @@ export class FBO {
     }
 
     for (const constraint of this.constraints) {
-      constraints += constraint.toGLSL() + "\n";
+      for (const uniformName in constraint.uniforms) {
+        const uniformValue = constraint.uniforms[uniformName];
+        let type = getUniformType(uniformValue);
+
+        if (type) {
+          this.material.uniforms[uniformName] = { value: uniformValue };
+          uniformString += `uniform ${type} ${uniformName};\n`;
+        } else {
+          console.warn(`Unsupported uniform type for ${uniformName}:`, uniformValue);
+        }
+      }
+
+      constraints += constraint.glsl + "\n";
     }
 
     let returnMap: Record<string, string | null> = {
@@ -131,7 +161,7 @@ export class FBO {
       "#Z": null,
       "#W": null,
     };
-    for (const property of this.properties) {
+    for (const property of this.properties.values()) {
       for (let i = 0; i < property.size; i++) {
         let returnChannel = "xyzw".charAt(property.channelOffset + i);
         let propertyChannel = property.size > 1 ? "." + "xyzw".charAt(i) : "";
@@ -181,8 +211,8 @@ export class FBO {
 
   // Method to add value(s) to the FBO
   inject(data: Float32Array, offset: number = 0) {
-    if (data.length % 4 !== 0) {
-      throw new Error("Data length must be a multiple of 4 for RGBA format.");
+    if (data.length % this.channels !== 0) {
+      throw new Error(`Data length must be a multiple of ${this.channels}.`);
     }
 
     if (offset < 0 || offset + data.length / 4 > this.width * this.height) {
@@ -251,6 +281,5 @@ export class FBO {
     this.read.dispose();
     this.write.dispose();
     this.material.dispose();
-    this.scene.removeFromParent();
   }
 }

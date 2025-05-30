@@ -17,6 +17,16 @@
       "import": "./utils/index.js",
       "require": "./utils/index.cjs",
       "types": "./utils/index.d.ts"
+    },
+    "./frames": {
+      "import": "./frames/index.js",
+      "require": "./frames/index.cjs",
+      "types": "./frames/index.d.ts"
+    },
+    "./constraints": {
+      "import": "./constraints/index.js",
+      "require": "./constraints/index.cjs",
+      "types": "./constraints/index.d.ts"
     }
   },
   "devDependencies": {

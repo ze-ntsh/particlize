@@ -1,5 +1,12 @@
-import { Constraint } from "@/constraints/Constraint";
 import { FBO } from "@/FBO";
+
+// Types
+export type PropertyParams = {
+  name: string;
+  size: number;
+  defaultValue?: Float32Array;
+  fbo: FBO;
+};
 
 export class Property {
   uuid: string = crypto.randomUUID();
@@ -9,32 +16,34 @@ export class Property {
   fbo: FBO;
   channelOffset: number = 0;
 
-  constructor(props: { name: string; size: number; defaultValue?: Float32Array; fbo: FBO }) {
-    if (typeof props.name !== "string" || props.name.trim() === "") {
-      throw new Error(`Invalid property name: "${props.name}". It must be a non-empty string.`);
+  constructor({ name, size, defaultValue, fbo }: PropertyParams) {
+    if (!name || typeof name !== "string" || !/^[a-zA-Z]+$/.test(name)) {
+      throw new Error("Invalid property name. Must be a non-empty string containing only letters.");
     }
-    this.name = props.name;
+    this.name = name;
 
-    if (props.size <= 0 || props.size > 4) {
-      throw new Error(`Size for property "${props.name}" must be between 1 and 4.`);
+    if (size <= 0 || size > 4) {
+      throw new Error(`Size for property "${name}" must be between 1 and 4.`);
     }
-    this.size = props.size;
+    this.size = size;
 
-    if (!props.defaultValue) {
-      props.defaultValue = new Float32Array(this.size);
+    if (!defaultValue) {
+      defaultValue = new Float32Array(this.size);
     }
-    if (!(props.defaultValue instanceof Float32Array)) {
-      throw new Error(`Default value for property "${props.name}" must be a Float32Array.`);
+    if (!(defaultValue instanceof Float32Array)) {
+      throw new Error(`Default value for property "${name}" must be a Float32Array.`);
     }
-    if (props.defaultValue.length !== this.size) {
-      throw new Error(`Default value for property "${props.name}" must have a length of ${this.size}.`);
+    if (defaultValue.length !== this.size) {
+      throw new Error(`Default value for property "${name}" must have a length of ${this.size}.`);
     }
-    this.defaultValue = props.defaultValue || new Float32Array(this.size);
+    this.defaultValue = defaultValue || new Float32Array(this.size);
 
-    if (!(props.fbo instanceof FBO)) {
-      throw new Error(`FBO for property "${props.name}" must be an instance of FBO.`);
+    if (!(fbo instanceof FBO)) {
+      throw new Error(`FBO for property "${name}" must be an instance of FBO.`);
     }
-    this.fbo = props.fbo;
+    this.fbo = fbo;
+
+    // Ensure the FBO has this property in its properties array
     this.fbo.properties.push(this);
   }
 }

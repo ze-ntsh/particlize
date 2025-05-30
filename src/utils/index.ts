@@ -44,3 +44,31 @@ export const textToMesh = async (
   const mesh = new THREE.Mesh(geometry, material);
   return mesh;
 };
+
+export const getUniformType = (uniformValue: any): string | null => {
+  if (uniformValue instanceof THREE.Texture) {
+    return "sampler2D";
+  } else if (uniformValue instanceof THREE.Vector2) {
+    return "vec2";
+  } else if (uniformValue instanceof THREE.Vector3) {
+    return "vec3";
+  } else if (uniformValue instanceof THREE.Vector4) {
+    return "vec4";
+  } else if (typeof uniformValue === "number") {
+    return "float";
+  } else if (Array.isArray(uniformValue)) {
+    // Check if all elements are numbers
+    if (uniformValue.every((v) => typeof v === "number")) {
+      if (uniformValue.length === 1) {
+        return "float";
+      } else if (uniformValue.length === 2) {
+        return "vec2";
+      } else if (uniformValue.length === 3) {
+        return "vec3";
+      } else if (uniformValue.length === 4) {
+        return "vec4";
+      }
+    }
+  }
+  return null;
+};

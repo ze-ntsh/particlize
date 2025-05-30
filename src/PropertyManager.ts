@@ -4,9 +4,18 @@ import * as THREE from "three";
 import { Particle } from "@/Particle";
 import { Property } from "@/Property";
 
+// Types
+export type PropertyManagerParams = {
+  width?: number;
+  height?: number;
+  renderer?: THREE.WebGLRenderer;
+};
+
 export class PropertyManager {
+  uuid: string = crypto.randomUUID();
+
   // Properties
-  properties: Record<string, Property> = {};
+  properties: Map<string, Property> = new Map<string, Property>();
 
   // FBOs
   scene: THREE.Scene = new THREE.Scene();
@@ -14,35 +23,19 @@ export class PropertyManager {
   renderer: THREE.WebGLRenderer;
   height: number = 512;
   width: number = 512;
-  max: number = 0;
-  fbos: Record<string, FBO> = {};
+  fbos: Map<string, FBO> = new Map();
 
-  // Basic shader
-  basicShader: THREE.ShaderMaterial = new THREE.ShaderMaterial({
-    uniforms: {},
-    vertexShader: /* glsl */ `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: /*glsl */ `
-      varying vec2 vUv;
-      //UNIFORMS
-      void main() {
-        //PROPERTY_UNPACKING
-        //CONSTRAINTS
-        //REPACKING_RETURN
-      }
-    `,
-  });
+  constructor({ renderer = new THREE.WebGLRenderer(), width = 512, height = 512 }: PropertyManagerParams) {
+    if (!renderer || !(renderer instanceof THREE.WebGLRenderer)) {
+      throw new Error("Invalid renderer provided. Must be an instance of THREE.WebGLRenderer.");
+    }
+    if (width <= 0 || height <= 0) {
+      throw new Error("Width and height must be positive numbers.");
+    }
 
-  constructor(renderer: THREE.WebGLRenderer, width: number = 512, height: number = 512) {
     this.renderer = renderer;
     this.width = width;
     this.height = height;
-    this.max = width * height;
 
     // Initialize camera
     this.camera.position.set(0, 0, 1);
@@ -51,10 +44,8 @@ export class PropertyManager {
   }
 
   add(name: string, size: number, defaultValue?: Float32Array): this {
-    if (this.properties[name]) {
+    if (this.properties.has(name)) {
       console.warn(`Property "${name}" already exists. Overwriting.`);
-      // delete this.properties[name];
-      // delete this.fbos[name];
     }
 
     const fbo = new FBO({
@@ -63,6 +54,7 @@ export class PropertyManager {
       height: this.height,
       renderer: this.renderer,
       camera: this.camera,
+      channels: size,
     });
 
     const property = new Property({
@@ -72,20 +64,23 @@ export class PropertyManager {
       fbo: fbo,
     });
 
-    this.fbos[name] = fbo;
-    this.properties[name] = property;
+    this.fbos.set(name, fbo);
+    this.properties.set(name, property);
+
+    console.log(this.properties, this.fbos);
 
     return this;
   }
 
   constrain(name: string, constraint: Constraint): this {
-    if (!this.properties[name]) {
-      throw new Error(`Property "${name}" does not exist.`);
+    if (!(constraint instanceof Constraint)) {
+      throw new Error("Constraint must be an instance of the Constraint class.");
     }
 
-    const property = this.properties[name];
-    if (!property.fbo) {
-      throw new Error(`FBO for property "${name}" has not been built yet.`);
+    const property = this.properties.get(name);
+
+    if (!property) {
+      throw new Error(`Property "${name}" does not exist.`);
     }
 
     property.fbo.constraints.push(constraint);
@@ -97,16 +92,23 @@ export class PropertyManager {
     if (names.length < 2) {
       throw new Error("Group must contain at least two properties.");
     }
+
     let fboName = "";
     let channelOffset = 0;
-    const properties = names.map((name, index) => {
-      if (!this.properties[name]) {
+    const properties: Property[] = [];
+
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i];
+
+      const property = this.properties.get(name);
+      if (!property) {
         throw new Error(`Property "${name}" does not exist.`);
       }
-      const property = this.properties[name];
+
       if (property.fbo.properties.length > 1) {
         throw new Error(`Property "${name}" is already grouped.`);
       }
+
       if (property.size + channelOffset > 4) {
         throw new Error(`Cannot group property "${name}" with size ${property.size} at offset ${channelOffset}. Total exceeds 4.`);
       }
@@ -114,10 +116,15 @@ export class PropertyManager {
       property.channelOffset = channelOffset;
       channelOffset += property.size;
 
+      // Delete the exsiting FBO for this property
+      this.fbos.get(name)?.dispose();
+      this.fbos.delete(name);
+
       // For the first name, just use it as is; for others, capitalize first letter
-      fboName += index === 0 ? name : name.charAt(0).toUpperCase() + name.slice(1);
-      return this.properties[name];
-    });
+      fboName += name.charAt(0).toUpperCase() + name.slice(1);
+
+      properties.push(property);
+    }
 
     // Create a new FBO for the group
     const groupFBO = new FBO({
@@ -127,17 +134,11 @@ export class PropertyManager {
       renderer: this.renderer,
       camera: this.camera,
       properties: properties,
+      channels: channelOffset,
     });
 
-    // Remove existing FBOs for these properties
-    for (const name of names) {
-      if (this.fbos[name]) {
-        delete this.fbos[name];
-      }
-    }
-
     // Add the new FBO to the manager
-    this.fbos[fboName] = groupFBO;
+    this.fbos.set(fboName, groupFBO);
     for (const property of properties) {
       property.fbo = groupFBO;
     }
@@ -146,16 +147,15 @@ export class PropertyManager {
   }
 
   link(source: string, target: string, bidirectional: Boolean = false): this {
-    if (!this.properties[source] || !this.properties[target]) {
+    const sourceProperty = this.properties.get(source);
+    const targetProperty = this.properties.get(target);
+
+    if (!sourceProperty || !targetProperty) {
       throw new Error(`One or both properties "${source}" and "${target}" do not exist.`);
     }
 
-    const sourceFBO = this.properties[source].fbo;
-    const targetFBO = this.properties[target].fbo;
-
-    if (!sourceFBO || !targetFBO) {
-      throw new Error(`One or both FBOs for "${source}" and "${target}" do not exist.`);
-    }
+    const sourceFBO = sourceProperty.fbo;
+    const targetFBO = targetProperty.fbo;
 
     // We can remove the dependencies and directly link the FBO uniforms (if needed in the future)
     sourceFBO.dependencies.add(targetFBO);
@@ -167,52 +167,37 @@ export class PropertyManager {
   }
 
   linkAll(): this {
-    for (const fbo of Object.values(this.fbos)) {
-      fbo.dependencies = new Set(Object.values(this.fbos));
+    let fboSet = new Set(this.fbos.values());
+    for (const fbo of fboSet) {
+      fbo.dependencies = new Set(fboSet);
     }
 
     return this;
   }
 
   build(): this {
-    for (const fboName in this.fbos) {
-      this.fbos[fboName].build();
-    }
+    this.fbos.values().forEach((fbo) => {
+      fbo.build();
+    });
     return this;
   }
 
-  get(name: string): FBO {
-    if (!this.properties[name]) {
+  getFBO(name: string): FBO {
+    const property = this.properties.get(name);
+    if (!property) {
       throw new Error(`FBO "${name}" does not exist.`);
     }
-    return this.properties[name].fbo;
-  }
-
-  validate(particle: Particle) {
-    for (const name in this.properties) {
-      const property = this.properties[name];
-      if (!(name in particle)) {
-        particle[name] = property.defaultValue.slice();
-      }
-      const value = particle[name];
-      if (value.length !== property.size) {
-        throw new Error(`Property "${name}" has incorrect size in particle instance. Expected ${property.size}, got ${value.length}.`);
-      }
-    }
-    return this;
+    return property.fbo;
   }
 
   setUniforms(name: string, uniforms: Record<string, any>): this {
-    if (!this.properties[name]) {
+    const property = this.properties.get(name);
+
+    if (!property) {
       throw new Error(`Property "${name}" does not exist.`);
     }
 
-    const property = this.properties[name];
     for (const [key, value] of Object.entries(uniforms)) {
-      if (!property.fbo) {
-        throw new Error(`Build the property manager before setting uniforms for "${name}".`);
-      }
-
       if (property.fbo.material.uniforms[key]) {
         property.fbo.material.uniforms[key].value = value;
       } else {
@@ -223,13 +208,21 @@ export class PropertyManager {
   }
 
   setUniformsAll(uniforms: Record<string, any>): this {
-    for (const name in this.properties) {
-      this.setUniforms(name, uniforms);
+    for (const property of this.properties.values()) {
+      for (const [key, value] of Object.entries(uniforms)) {
+        if (property.fbo.material.uniforms[key]) {
+          property.fbo.material.uniforms[key].value = value;
+        } else {
+          property.fbo.material.uniforms[key] = { value: value };
+        }
+      }
     }
     return this;
   }
 
   update(names: string[] = []): this {
+    // TODO: Maybe switch to needUpdate flag for each FBO / Property
+
     if (names.length === 0) {
       // Update all FBOs if no specific names are provided
       return this.updateAll();
@@ -237,11 +230,13 @@ export class PropertyManager {
 
     const fbosToUpdate: Set<FBO> = new Set();
     for (const name of names) {
-      if (!this.properties[name]) {
+      const property = this.properties.get(name);
+      if (!property) {
         console.warn(`Property "${name}" does not exist. Skipping update.`);
+        continue;
       }
 
-      fbosToUpdate.add(this.properties[name].fbo);
+      fbosToUpdate.add(property.fbo);
     }
 
     for (const fbo of fbosToUpdate) {
@@ -252,15 +247,15 @@ export class PropertyManager {
   }
 
   updateAll(): this {
-    for (const fboName in this.fbos) {
-      this.fbos[fboName].update();
+    for (const fbo of this.fbos.values()) {
+      fbo.update();
     }
     return this;
   }
 
-  inject(data: Record<string, Float32Array>, offset: number = 0): this {
+  injectFBOs(data: Record<string, Float32Array>, offset: number = 0): this {
     for (const fboName in data) {
-      const fbo = this.fbos[fboName];
+      const fbo = this.fbos.get(fboName);
       if (!fbo) {
         throw new Error(`FBO "${fboName}" does not exist.`);
       }
@@ -269,5 +264,35 @@ export class PropertyManager {
     }
 
     return this;
+  }
+
+  injectFBO(name: string, data: Float32Array, offset: number = 0): this {
+    const fbo = this.fbos.get(name);
+    if (!fbo) {
+      throw new Error(`FBO "${name}" does not exist.`);
+    }
+    fbo.inject(data, offset);
+    return this;
+  }
+
+  inject(name: string, data: Float32Array, offset: number = 0): this {
+    const property = this.properties.get(name);
+    if (!property) {
+      throw new Error(`Property "${name}" does not exist.`);
+    }
+
+    const fbo = property.fbo;
+    fbo.inject(data, offset);
+
+    return this;
+  }
+
+  dispose(): void {
+    this.fbos.forEach((fbo) => {
+      fbo.dispose();
+    });
+    this.fbos.clear();
+    this.properties.clear();
+    this.scene.clear();
   }
 }

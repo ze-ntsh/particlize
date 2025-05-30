@@ -21,6 +21,18 @@ const config = {
       noCheck: false,
       output: { exportReferencedTypes: false },
     },
+    {
+      filePath: "./src/frames/index.ts",
+      outFile: "./build/frames/index.d.ts",
+      noCheck: false,
+      output: { exportReferencedTypes: false },
+    },
+    {
+      filePath: "./src/constraints/index.ts",
+      outFile: "./build/constraints/index.d.ts",
+      noCheck: false,
+      output: { exportReferencedTypes: false },
+    },
   ],
 };
 

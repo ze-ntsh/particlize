@@ -11,6 +11,8 @@ export default defineConfig({
         index: path.resolve(__dirname, "src/index.ts"),
         utils: path.resolve(__dirname, "src/utils/index.ts"),
         samplers: path.resolve(__dirname, "src/samplers/index.ts"),
+        frames: path.resolve(__dirname, "src/frames/index.ts"),
+        constraints: path.resolve(__dirname, "src/constraints/index.ts"),
       },
       formats: ["es", "cjs"],
       fileName: (format, entryName) => {

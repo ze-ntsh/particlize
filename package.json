@@ -1,10 +1,30 @@
 {
-  "name": "particlize",
+  "name": "particlize-js",
   "version": "0.0.0",
   "type": "module",
   "description": "A library for creating particle systems in Three.js",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts"
+    },
+    "./samplers": {
+      "import": "./src/samplers/index.ts"
+    },
+    "./utils": {
+      "import": "./src/utils/index.ts"
+    },
+    "./frames": {
+      "import": "./src/utils/index.ts"
+    },
+    "./constraints": {
+      "import": "./src/constraints/index.ts"
+    }
+  },
   "scripts": {
     "dev": "vite --host",
+    "site": "cd site && npm run dev",
+    "build:site": "cd site && npm run build",
     "clean": "rimraf build",
     "build:js": "vite build",
     "build:types": "dts-bundle-generator --config dts-bundle-generator.config.ts",
@@ -12,6 +32,7 @@
     "postbuild": "node scripts/postbuild.js"
   },
   "devDependencies": {
+    "@tweakpane/core": "^2.0.5",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.10.2",
     "@types/three": "^0.176.0",
@@ -27,6 +48,7 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
-    "three": "^0.176.0"
+    "three": "^0.176.0",
+    "tweakpane": "^4.0.5"
   }
 }
