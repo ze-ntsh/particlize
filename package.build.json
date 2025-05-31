@@ -1,0 +1,12 @@
+{
+  "name": "particlize",
+  "version": "0.0.0",
+  "type": "module",
+  "devDependencies": {
+    "@types/three": "^0.176.0",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "three": "^0.176.0"
+  }
+}

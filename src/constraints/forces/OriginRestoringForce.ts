@@ -1,3 +1,4 @@
+import { deepMerge } from "@/utils";
 import { Constraint } from "../Constraint";
 
 // Types
@@ -9,30 +10,27 @@ export type OriginRestoringForceParams = {
 };
 
 export class OriginRestoringForce extends Constraint {
-  static paramNames: Array<keyof OriginRestoringForceParams> = ["strength"];
+  // Default parameters
+  static readonly defaultParams: OriginRestoringForceParams = {
+    strength: { value: 10, hardcode: true },
+  };
 
   constructor(name: string, params: OriginRestoringForceParams = {}) {
-    const { strength = { value: 10.0, hardcode: false } } = params;
+    params = deepMerge(OriginRestoringForce.defaultParams, params) as OriginRestoringForceParams;
 
-    super(name);
-    let strengthUniform = "";
-    if (strength.hardcode) {
-      strengthUniform = strength.value.toFixed(2);
-    } else {
-      strengthUniform = `u_strength_${name}`;
-      this.uniforms = {
-        [strengthUniform]: strength.value,
-      };
-    }
+    super(
+      name,
+      /*glsl*/ `
+        float d_${name} = 2.0 * sqrt(#STRENGTH);
 
-    this.glsl = /**glsl**/ `
-      float d = 2.0 * sqrt(${strengthUniform});
+        vec3 restoring_${name} = (origin - position) * #STRENGTH;
+        vec3 damping_${name} = -velocity * d_${name};
 
-      vec3 restoring = (origin - position) * ${strengthUniform};
-      vec3 damping = -velocity * d;
+        vec3 acceleration_${name} = restoring_${name} + damping_${name};
+        force = acceleration_${name} * mass;
+      `
+    );
 
-      vec3 acceleration = restoring + damping;
-      force = acceleration * mass;
-    `;
+    this.build(params);
   }
 }

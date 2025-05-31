@@ -19,17 +19,20 @@
     },
     "./constraints": {
       "import": "./src/constraints/index.ts"
+    },
+    "./constraints/forces": {
+      "import": "./src/constraints/forces/index.ts"
     }
   },
   "scripts": {
+    "clean": "rimraf build",
     "dev": "vite --host",
     "site": "cd site && npm run dev",
     "build:site": "cd site && npm run build",
-    "clean": "rimraf build",
-    "build:js": "vite build",
-    "build:types": "dts-bundle-generator --config dts-bundle-generator.config.ts",
-    "build": "npm run clean && npm run build:js && npm run build:types",
-    "postbuild": "node scripts/postbuild.js"
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build": "npm run clean && npm run build:esm && npm run build:cjs",
+    "postbuild": "node scripts/build/copyfiles.js && node scripts/build/merge_esm_cjs.js && node scripts/build/generate_package_json.js && rimraf build/dist/esm && rimraf build/dist/cjs"
   },
   "devDependencies": {
     "@tweakpane/core": "^2.0.5",

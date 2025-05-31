@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Property } from "@/Property";
 import { Constraint } from "@/constraints/Constraint";
-import { getUniformType } from "./utils";
+import { getGLSLType } from "./utils";
 
 // Types
 export type FBOParams = {
@@ -27,7 +27,7 @@ export class FBO {
 
   properties: Property[] = [];
   dependencies: Set<FBO> = new Set();
-  constraints: Constraint[] = [];
+  constraints: Map<string, Constraint> = new Map<string, Constraint>();
   channels: number = 4; // Default to RGBA
 
   material: THREE.ShaderMaterial = new THREE.ShaderMaterial({
@@ -55,7 +55,7 @@ export class FBO {
   }: FBOParams) {
     // Constructor properties
     this.name = name;
-    this.textureName = `u_${this.name}Texture`;
+    this.textureName = `u_${this.name}_texture`;
     this.height = height;
     this.width = width;
     this.renderer = renderer;
@@ -130,7 +130,7 @@ export class FBO {
     console.log(this.material.uniforms);
     for (const uniformName in this.material.uniforms) {
       const uniformValue = this.material.uniforms[uniformName].value;
-      let type = getUniformType(uniformValue);
+      let type = getGLSLType(uniformValue);
 
       if (type) {
         uniformString += `uniform ${type} ${uniformName};\n`;
@@ -139,10 +139,10 @@ export class FBO {
       }
     }
 
-    for (const constraint of this.constraints) {
+    for (const constraint of this.constraints.values()) {
       for (const uniformName in constraint.uniforms) {
         const uniformValue = constraint.uniforms[uniformName];
-        let type = getUniformType(uniformValue);
+        let type = getGLSLType(uniformValue);
 
         if (type) {
           this.material.uniforms[uniformName] = { value: uniformValue };
@@ -234,6 +234,15 @@ export class FBO {
     //   this.renderer.readRenderTargetPixels(this.read, startX, startY, width, height, currentData);
     // }
 
+    // if (offset == 0 && data.length === this.width * this.height * this.channels) {
+    //   console.warn("Data is exactly the size of the texture. Directly setting it.");
+    //   // If the data is exactly the size of the texture, we can directly set it
+    //   this.read.texture.image.data = data;
+    //   this.read.texture.needsUpdate = true;
+    //   return;
+    // }
+
+    //TODO: Move this to a web worker ?
     const totalPixels = data.length / 4; // Total number of RGBA pixels
     const textureWidth = this.width;
     const textureHeight = this.height;

@@ -45,30 +45,64 @@ export const textToMesh = async (
   return mesh;
 };
 
-export const getUniformType = (uniformValue: any): string | null => {
-  if (uniformValue instanceof THREE.Texture) {
+export const getGLSLType = (value: any): string | null => {
+  if (value instanceof THREE.Texture) {
     return "sampler2D";
-  } else if (uniformValue instanceof THREE.Vector2) {
+  } else if (value instanceof THREE.Vector2) {
     return "vec2";
-  } else if (uniformValue instanceof THREE.Vector3) {
+  } else if (value instanceof THREE.Vector3) {
     return "vec3";
-  } else if (uniformValue instanceof THREE.Vector4) {
+  } else if (value instanceof THREE.Vector4) {
     return "vec4";
-  } else if (typeof uniformValue === "number") {
+  } else if (typeof value === "number") {
     return "float";
-  } else if (Array.isArray(uniformValue)) {
-    // Check if all elements are numbers
-    if (uniformValue.every((v) => typeof v === "number")) {
-      if (uniformValue.length === 1) {
-        return "float";
-      } else if (uniformValue.length === 2) {
-        return "vec2";
-      } else if (uniformValue.length === 3) {
-        return "vec3";
-      } else if (uniformValue.length === 4) {
-        return "vec4";
+  }
+  return null;
+};
+
+export const getGLSLValue = (value: any): string => {
+  if (value instanceof THREE.Vector2) {
+    return `vec2(${value.x}, ${value.y})`;
+  } else if (value instanceof THREE.Vector3) {
+    return `vec3(${value.x}, ${value.y}, ${value.z})`;
+  } else if (value instanceof THREE.Vector4) {
+    return `vec4(${value.x}, ${value.y}, ${value.z}, ${value.w})`;
+  } else if (typeof value === "number") {
+    return `${value.toFixed(6)}`;
+  } else if (Array.isArray(value)) {
+    if (value.every((v) => typeof v === "number")) {
+      return `vec${value.length}(${value.map((v) => v.toFixed(6)).join(", ")})`;
+    } else {
+      console.warn("Array contains non-number values:", value);
+      return "";
+    }
+  }
+
+  return "";
+};
+
+function isObject(item: any): boolean {
+  return item !== null && typeof item === "object" && !Array.isArray(item);
+}
+
+export const deepMerge = (target: any, source: any, visited = new Map<any, any>()) => {
+  if (isObject(target) && isObject(source)) {
+    for (const key in source) {
+      if (isObject(source[key])) {
+        if (!target[key]) {
+          target[key] = {};
+        }
+        // Check if the source object has already been visited
+        if (!visited.has(source[key])) {
+          visited.set(source[key], {});
+          deepMerge(target[key], source[key], visited);
+        } else {
+          target[key] = visited.get(source[key]);
+        }
+      } else {
+        target[key] = source[key];
       }
     }
   }
-  return null;
+  return target;
 };

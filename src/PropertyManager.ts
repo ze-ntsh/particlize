@@ -83,8 +83,21 @@ export class PropertyManager {
       throw new Error(`Property "${name}" does not exist.`);
     }
 
-    property.fbo.constraints.push(constraint);
+    property.fbo.constraints.set(constraint.name, constraint);
 
+    return this;
+  }
+
+  unconstrain(name: string, constraintName: string): this {
+    const property = this.properties.get(name);
+    if (!property) {
+      throw new Error(`Property "${name}" does not exist.`);
+    }
+    const constraint = property.fbo.constraints.get(constraintName);
+    if (!constraint) {
+      throw new Error(`Constraint "${constraintName}" does not exist for property "${name}".`);
+    }
+    property.fbo.constraints.delete(constraintName);
     return this;
   }
 
@@ -120,8 +133,8 @@ export class PropertyManager {
       this.fbos.get(name)?.dispose();
       this.fbos.delete(name);
 
-      // For the first name, just use it as is; for others, capitalize first letter
-      fboName += name.charAt(0).toUpperCase() + name.slice(1);
+      // underscore between names
+      fboName += (i > 0 ? "_" : "") + name;
 
       properties.push(property);
     }

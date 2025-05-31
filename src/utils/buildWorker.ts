@@ -13,7 +13,11 @@ self.onmessage = (e) => {
   const count = particles.length;
 
   for (const propertyName in properties) {
-    const property = properties[propertyName];
+    const property = properties.get(propertyName);
+
+    if (!property) {
+      throw new Error(`Property "${propertyName}" not found in the property manager.`);
+    }
 
     if (!property.fbo) {
       throw new Error(`Please build the property manager before building the frame.`);
@@ -26,8 +30,8 @@ self.onmessage = (e) => {
   for (let i = 0; i < particles.length; i++) {
     const particle = particles[i];
     const offset = i * 4;
-    for (const propName in properties) {
-      const { fbo, channelOffset, defaultValue } = properties[propName];
+    for (const [propName, property] of Object.entries(properties)) {
+      const { fbo, channelOffset, defaultValue } = property;
       const value = particle[propName] || defaultValue || new Float32Array(4);
       result[fbo.name].set(value, offset + channelOffset);
     }

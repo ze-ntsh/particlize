@@ -2,15 +2,15 @@
 - [ ] Allow for users to be able to access random particles and change their properties
 - [ ] Add a way to add forces to the system
 - [/] Morphing
-- [ ] Allow linking properties of particles (eg color/size) to other properties (eg velocity)
+- [/] Allow linking properties of particles (eg color/size) to other properties (eg velocity)
 - [ ] Add postprocessing
-- [ ] Allow users to set custom properties
-- [ ] Allow for custom shaders wherever possible
+- [/] Allow users to set custom properties
+- [/] Allow for custom shaders wherever possible
 - [ ] Add a way to set the color of the particles (maps, textures, etc.)
 - [ ] Add a line constraint (draws lines between particles). Can be applied between any two particles
-- [ ] Make forces toggleable
+- [/] Make forces toggleable
 - [ ] Add more samplers for meshes
-- [ ] Mouse events
+- [/] Mouse events
 - [ ] Add a way to maybe group particles. Physics becomes easier ? (center of mass, etc.)
 
 shader compile 

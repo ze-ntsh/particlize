@@ -33,6 +33,12 @@ const config = {
       noCheck: false,
       output: { exportReferencedTypes: false },
     },
+    {
+      filePath: "./src/constraints/forces/index.ts",
+      outFile: "./build/constraints/forces/index.d.ts",
+      noCheck: false,
+      output: { exportReferencedTypes: false },
+    },
   ],
 };
 

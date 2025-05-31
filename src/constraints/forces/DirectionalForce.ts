@@ -1,15 +1,30 @@
+import { deepMerge } from "@/utils";
 import { Constraint } from "../Constraint";
 
-export class DirectionalForce extends Constraint {
-  constructor(direction: [number, number, number], strength: number) {
-    const glsl = /**glsl**/ `
-      vec3 dir = normalize(vec3(${direction.join(", ")}));
-      force = dir * u_strength * mass;
-    `;
+// Types
+export type DirectionalForceParams = {
+  strength: {
+    value: [number, number, number];
+    hardcode?: boolean;
+  };
+};
 
-    super(glsl);
-    this.uniforms = {
-      u_strength: strength,
-    };
+export class DirectionalForce extends Constraint {
+  // Default parameters
+  static readonly defaultParams: DirectionalForceParams = {
+    strength: { value: [0, 0, 0], hardcode: true },
+  };
+
+  constructor(name: string, params: DirectionalForceParams) {
+    params = deepMerge(DirectionalForce.defaultParams, params) as DirectionalForceParams;
+
+    super(
+      name,
+      /*glsl*/ `
+        force = #STRENGTH * mass;
+      `
+    );
+
+    this.build(params);
   }
 }

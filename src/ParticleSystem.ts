@@ -13,7 +13,7 @@ import { PropertyManager } from "@/PropertyManager";
 import { RenderTargetVisualizer } from "@/RenderTargetVisualizer";
 import { Frame } from "@/frames/Frame";
 import { Constraint } from "@/constraints/Constraint";
-import { OriginRestoringForce } from "./constraints/forces/OriginRestoringForce";
+import { OriginRestoringForce } from "./constraints/forces";
 
 // Types
 export interface ParticleSystemParams {
@@ -47,7 +47,7 @@ export class ParticleSystem extends EventTarget {
   uvs: Float32Array;
 
   // FBOs
-  propertyManager: PropertyManager;
+  properties: PropertyManager;
   renderTargetVisualizer: RenderTargetVisualizer | null = null;
 
   // Particles
@@ -107,7 +107,7 @@ export class ParticleSystem extends EventTarget {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
     // FBO Manager
-    this.propertyManager = new PropertyManager({
+    this.properties = new PropertyManager({
       renderer: this.renderer,
       width: fboWidth,
       height: fboHeight,
@@ -121,7 +121,7 @@ export class ParticleSystem extends EventTarget {
     const lifetimeConstraint = new Constraint(
       "lifetimeUpdateConstraint",
       /*glsl*/ `
-      lifetime -= u_Delta;
+      lifetime -= u_delta;
     `
     );
 
@@ -141,19 +141,18 @@ export class ParticleSystem extends EventTarget {
     const velocityConstraint = new Constraint(
       "velocityUpdateConstraint",
       /*glsl*/ `
-      // Hover effect based on mouse position
       vec3 acceleration = force / mass;
-      // Apply restoring force (from acceleration FBO)
-      velocity += acceleration * u_Delta;
+      // Apply acceleration to velocity
+      velocity += acceleration * u_delta;
 
       // Mouse repulsion (radial, only within radius)
-      vec2 toParticle = position.xy - u_Mouse.xy;
+      vec2 toParticle = position.xy - u_mouse.xy;
       float dist = length(toParticle);
 
       if(dist < 0.2 && dist > 0.0) {
         vec2 dir = normalize(toParticle);
         float strength = (1.0 - (dist / 0.2)) * 100.0;
-        velocity.xy += dir * strength * u_Delta;
+        velocity.xy += dir * strength * u_delta;
       }
     `
     );
@@ -163,19 +162,19 @@ export class ParticleSystem extends EventTarget {
       "positionUpdateConstraint",
       /*glsl*/ `
       // Update position based on velocity
-      position += velocity * u_Delta;
+      position += velocity * u_delta;
     `
     );
 
     // Origin restoring force
-    const forceConstraint = new OriginRestoringForce("originRestoringForce", {
+    const originRestoringForce = new OriginRestoringForce("originRestoringForce", {
       strength: {
         value: 10,
         hardcode: true,
-      }
+      },
     });
 
-    this.propertyManager
+    this.properties
       .add("origin", 3)
       .add("position", 3)
       .add("velocity", 3)
@@ -189,26 +188,25 @@ export class ParticleSystem extends EventTarget {
       .add("color", 4, new Float32Array([1, 0, 1, 1]))
       .linkAll()
       .setUniformsAll({
-        u_Time: 0,
-        u_Delta: 0,
-        u_Resolution: new THREE.Vector2(this.canvas.width, this.canvas.height),
-        u_TextureResolution: new THREE.Vector2(this.propertyManager.width, this.propertyManager.height),
-        u_Mouse: this.intersectionPoint,
+        u_time: 0,
+        u_delta: 0,
+        u_resolution: new THREE.Vector2(this.canvas.width, this.canvas.height),
+        u_texture_resolution: new THREE.Vector2(this.properties.width, this.properties.height),
+        u_mouse: this.intersectionPoint,
       })
       .constrain("velocity", velocityConstraint)
       .constrain("position", positionConstraint)
-      .constrain("force", forceConstraint)
+      .constrain("force", originRestoringForce)
       .constrain("lifetime", lifetimeConstraint)
       .constrain("color", colorConstraint)
-      .constrain("size", sizeConstraint)
       .build();
 
     // Particles
     this.uvs = new Float32Array(this.maxParticles * 2);
 
     for (let i = 0; i < this.maxParticles; i++) {
-      const x = (i % this.propertyManager.height) / this.propertyManager.width;
-      const y = Math.floor(i / this.propertyManager.width) / this.propertyManager.height;
+      const x = (i % this.properties.height) / this.properties.width;
+      const y = Math.floor(i / this.properties.width) / this.properties.height;
       this.uvs[i * 2 + 0] = x; // u
       this.uvs[i * 2 + 1] = y; // v
     }
@@ -219,9 +217,9 @@ export class ParticleSystem extends EventTarget {
       uniforms: {
         uMouse: { value: this.intersectionPoint },
         uResolution: { value: new THREE.Vector2(this.canvas.width, this.canvas.height) },
-        uPositionSizeTexture: { value: this.propertyManager.getFBO("position")?.read.texture },
-        uVelocityLifetimeTexture: { value: this.propertyManager.getFBO("velocity")?.read.texture },
-        uColorTexture: { value: this.propertyManager.getFBO("color")?.read.texture },
+        uPositionSizeTexture: { value: this.properties.getFBO("position")?.read.texture },
+        uVelocityLifetimeTexture: { value: this.properties.getFBO("velocity")?.read.texture },
+        uColorTexture: { value: this.properties.getFBO("color")?.read.texture },
       },
       transparent: true,
       depthWrite: false,
@@ -301,7 +299,7 @@ export class ParticleSystem extends EventTarget {
     this.renderer.setSize(this.canvas.width, this.canvas.height);
     this.camera.aspect = this.canvas.width / this.canvas.height;
     this.camera.updateProjectionMatrix();
-    this.propertyManager.setUniformsAll({
+    this.properties.setUniformsAll({
       u_Resolution: new THREE.Vector2(this.canvas.width, this.canvas.height),
     });
     this.particleMaterial.uniforms.uResolution.value.set(this.canvas.width, this.canvas.height);
@@ -313,8 +311,8 @@ export class ParticleSystem extends EventTarget {
       return;
     }
 
-    frame.build(this.propertyManager);
-    this.propertyManager.injectFBOs(frame.data, this.particleCount);
+    frame.build(this.properties);
+    this.properties.injectFBOs(frame.data, this.particleCount);
     this.particleCount += frame.count;
     this.particleGeometry.setDrawRange(0, this.particleCount);
     frame.dispose();
@@ -326,7 +324,7 @@ export class ParticleSystem extends EventTarget {
       return;
     }
 
-    frame.build(this.propertyManager);
+    frame.build(this.properties);
     if (frame.count < this.particleCount) {
       const originData = new Float32Array(this.particleCount * 4);
       // Repeat the target origins to fill the particle count
@@ -335,8 +333,8 @@ export class ParticleSystem extends EventTarget {
         originData.set([particle.position[0], particle.position[1], particle.position[2], 1.0], i * 4);
       }
 
-      this.propertyManager.inject("origin", originData);
-      this.propertyManager.update(["origin"]);
+      this.properties.inject("origin", originData);
+      this.properties.update(["origin"]);
     } else {
       // Create a new array with the same size as the target
       const originData = new Float32Array(frame.count * 4);
@@ -348,8 +346,8 @@ export class ParticleSystem extends EventTarget {
       }
 
       // Inject the data into the FBOs
-      this.propertyManager.inject("origin", originData);
-      this.propertyManager.update(["origin"]);
+      this.properties.inject("origin", originData);
+      this.properties.update(["origin"]);
     }
 
     // Update particle count
@@ -366,20 +364,20 @@ export class ParticleSystem extends EventTarget {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     this.raycaster.ray.intersectPlane(this.raycastPlane, this.intersectionPoint);
 
-    this.propertyManager.setUniformsAll({
-      u_Time: time,
-      u_Delta: delta,
-      u_Mouse: this.intersectionPoint,
+    this.properties.setUniformsAll({
+      u_time: time,
+      u_delta: delta,
+      u_mouse: this.intersectionPoint,
     });
-    this.propertyManager.updateAll();
+    this.properties.update(["position", "velocity", "force", "lifetime", "color"]);
 
     // Render
-    this.particleMaterial.uniforms.uPositionSizeTexture.value = this.propertyManager.getFBO("position")?.read.texture;
-    this.particleMaterial.uniforms.uColorTexture.value = this.propertyManager.getFBO("color")?.read.texture;
-    this.particleMaterial.uniforms.uVelocityLifetimeTexture.value = this.propertyManager.getFBO("velocity")?.read.texture;
+    this.particleMaterial.uniforms.uPositionSizeTexture.value = this.properties.getFBO("position")?.read.texture;
+    this.particleMaterial.uniforms.uColorTexture.value = this.properties.getFBO("color")?.read.texture;
+    this.particleMaterial.uniforms.uVelocityLifetimeTexture.value = this.properties.getFBO("velocity")?.read.texture;
 
     if (this.lineMaterial) {
-      this.lineMaterial.uniforms.uPositionSizeTexture.value = this.propertyManager.getFBO("position")?.read.texture;
+      this.lineMaterial.uniforms.uPositionSizeTexture.value = this.properties.getFBO("position")?.read.texture;
     }
 
     // Render the scene
@@ -399,7 +397,7 @@ export class ParticleSystem extends EventTarget {
       this.lineMaterial?.dispose();
       this.lines.geometry.dispose();
     }
-    this.propertyManager.dispose();
+    this.properties.dispose();
 
     // Remove event listeners
     window.removeEventListener("mousemove", () => {});
