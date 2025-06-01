@@ -16,23 +16,21 @@ type RadialForceParams = {
 export class RadialForce extends Constraint {
   // Default parameters
   static readonly defaultParams: RadialForceParams = {
-    center: { value: [0, 0, 0], hardcode: true },
-    strength: { value: [0, 0, 0], hardcode: true },
+    center: { value: [0, 0, 0], hardcode: false },
+    strength: { value: [0, 0, 0], hardcode: false },
   };
 
   constructor(name: string, params: RadialForceParams) {
-    params = deepMerge(RadialForce.defaultParams, params) as RadialForceParams;
-
     super(
       name,
       /*glsl*/ `
-        vec3 toParticle_${name} = position - #CENTER;
-        float dist_${name} = length(toParticle_${name});
-        vec3 dir_${name} = normalize(toParticle_${name});
-        force += dir_${name} * #STRENGTH * mass / (dist_${name} * dist_${name});
+      vec3 toParticle@ = position - #CENTER;
+      float dist@ = length(toParticle@);
+      vec3 dir@ = normalize(toParticle@);
+      force += dir@ * #STRENGTH * mass / (dist@ * dist@);
       `
     );
-
-    this.build(params);
+    this.params = deepMerge(RadialForce.defaultParams, params) as RadialForceParams;
+    this.build();
   }
 }

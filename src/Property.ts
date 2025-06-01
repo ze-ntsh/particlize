@@ -8,6 +8,15 @@ export type PropertyParams = {
   fbo: FBO;
 };
 
+/**
+ * Represents a property in a Frame Buffer Object (FBO).
+ * Each property has a unique UUID, a name, a size, a default value,
+ * and is associated with an FBO.
+ *
+ * This is an abstraction layer over FBOs. Properties that are not grouped use
+ * their own FBOs, while grouped properties share the same FBO and are packed
+ * into a single texture.
+ */
 export class Property {
   uuid: string = crypto.randomUUID();
   name: string;

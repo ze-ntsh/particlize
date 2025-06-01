@@ -12,7 +12,7 @@ export type DirectionalForceParams = {
 export class DirectionalForce extends Constraint {
   // Default parameters
   static readonly defaultParams: DirectionalForceParams = {
-    strength: { value: [0, 0, 0], hardcode: true },
+    strength: { value: [0, 0, 0], hardcode: false },
   };
 
   constructor(name: string, params: DirectionalForceParams) {
@@ -25,6 +25,7 @@ export class DirectionalForce extends Constraint {
       `
     );
 
-    this.build(params);
+    this.params = params;
+    this.build();
   }
 }

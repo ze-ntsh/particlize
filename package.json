@@ -29,18 +29,16 @@
     "dev": "vite --host",
     "site": "cd site && npm run dev",
     "build:site": "cd site && npm run build",
-    "build:esm": "tsc -p tsconfig.esm.json",
-    "build:cjs": "tsc -p tsconfig.cjs.json",
-    "build": "npm run clean && npm run build:esm && npm run build:cjs",
-    "postbuild": "node scripts/build/copyfiles.js && node scripts/build/merge_esm_cjs.js && node scripts/build/generate_package_json.js && rimraf build/dist/esm && rimraf build/dist/cjs"
+    "build": "npm run clean && node scripts/build/generate_dts_config.js && tsc && vite build && dts-bundle-generator --config dts-bundle-generator.config.json && tsc --build --clean",
+    "postbuild": "node scripts/build/copyfiles.js && node scripts/build/generate_package_json.js",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest --watch"
   },
   "devDependencies": {
-    "@tweakpane/core": "^2.0.5",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.10.2",
     "@types/three": "^0.176.0",
     "@vitest/coverage-v8": "^2.1.8",
-    "copyfiles": "^2.4.1",
     "dts-bundle-generator": "^9.5.1",
     "postcss": "^8.4.49",
     "postcss-scss": "^4.0.9",
@@ -51,7 +49,6 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
-    "three": "^0.176.0",
-    "tweakpane": "^4.0.5"
+    "three": "^0.176.0"
   }
 }

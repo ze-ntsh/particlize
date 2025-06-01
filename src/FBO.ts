@@ -39,6 +39,7 @@ export class FBO {
 
   injectBuffer: Map<string, Float32Array> = new Map<string, Float32Array>();
   needsUpdate: boolean = false;
+  needsRebuild: boolean = false;
 
   // Scene
   scene: THREE.Scene = new THREE.Scene();
@@ -127,7 +128,17 @@ export class FBO {
       }
     }
 
-    console.log(this.material.uniforms);
+    for (const constraint of this.constraints.values()) {
+      if (!constraint.active) continue;
+
+      for (const uniformName in constraint.uniforms) {
+        const uniformValue = constraint.uniforms[uniformName];
+        this.material.uniforms[uniformName] = { value: uniformValue };
+      }
+
+      constraints += constraint.glsl + "\n";
+    }
+
     for (const uniformName in this.material.uniforms) {
       const uniformValue = this.material.uniforms[uniformName].value;
       let type = getGLSLType(uniformValue);
@@ -137,22 +148,6 @@ export class FBO {
       } else {
         console.warn(`Unsupported uniform type for ${uniformName}:`, uniformValue);
       }
-    }
-
-    for (const constraint of this.constraints.values()) {
-      for (const uniformName in constraint.uniforms) {
-        const uniformValue = constraint.uniforms[uniformName];
-        let type = getGLSLType(uniformValue);
-
-        if (type) {
-          this.material.uniforms[uniformName] = { value: uniformValue };
-          uniformString += `uniform ${type} ${uniformName};\n`;
-        } else {
-          console.warn(`Unsupported uniform type for ${uniformName}:`, uniformValue);
-        }
-      }
-
-      constraints += constraint.glsl + "\n";
     }
 
     let returnMap: Record<string, string | null> = {
@@ -188,11 +183,15 @@ export class FBO {
     const quadGeometry = new THREE.PlaneGeometry(2, 2);
     const quadMesh = new THREE.Mesh(quadGeometry, this.material);
     this.scene.add(quadMesh);
-
-    console.log(`FBO ${this.name} built with shader:\n${this.material.fragmentShader}`);
   }
 
   update() {
+    if (this.needsRebuild) {
+      this.build();
+      this.needsRebuild = false;
+    }
+    if (!this.needsUpdate) return;
+
     // Update texture uniforms
     for (const dependancyFBO of this.dependencies) {
       this.material.uniforms[dependancyFBO.textureName].value = dependancyFBO.read.texture;
@@ -203,6 +202,13 @@ export class FBO {
     this.renderer.render(this.scene, this.camera);
     this.renderer.setRenderTarget(null);
 
+    // Swap read and write targets
+    this.swap();
+
+    this.needsUpdate = false;
+  }
+
+  swap() {
     // Swap the read and write targets
     const temp = this.read;
     this.read = this.write;

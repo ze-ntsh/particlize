@@ -21,6 +21,7 @@
     import { SamplerFrame, Frame } from "./src/frames";
     import { textToMesh } from "./src/utils";
     import { MeshSurfaceSampler } from "./src/samplers";
+    import { BasicConstraintsPlugin } from "./src/plugins/templates"
     import * as THREE from "three";
     import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
@@ -32,6 +33,7 @@
       fboHeight: 512,
       fboWidth: 512,
       backgroundColor: [0.001, 0.001, 0.005, 1],
+      plugins: [new BasicConstraintsPlugin()],
     });
 
     ps.addParticles(

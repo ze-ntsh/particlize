@@ -9,14 +9,19 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@pangenerator/tweakpane-textarea-plugin": "^2.0.0",
+    "@shaderfrog/glsl-parser": "^6.0.2",
     "next": "15.3.2",
+    "particlize-js": "file:../build/",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "particlize-js": "file:../build/"
+    "three": "^0.177.0",
+    "tweakpane": "^4.0.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@tweakpane/core": "^2.0.5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
