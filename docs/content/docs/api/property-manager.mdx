@@ -1,0 +1,115 @@
+---
+title: PropertyManager
+description: Manages particle properties, Frame Buffer Objects (FBOs), and constraints
+---
+
+## Constructor
+This class is automatically instantiated by the [`ParticleSystem`](/docs/api/particle-system) class as `manager` and 
+usually is not to be created directly unless you are implementing custom systems or need to manage properties independently.
+
+```typescript
+import { PropertyManager, PropertyManagerParams } from 'particlize-js';
+new PropertyManager(params: PropertyManagerParams)
+```
+
+### Parameters
+
+| Parameter | Type                     | Description                                       | Default |
+| --------- | ------------------------ | ------------------------------------------------- | ------- |
+| renderer  | `THREE.WebGLRenderer`    | WebGL renderer instance used for FBO operations  | -       |
+| width     | `number`                 | Width of the Frame Buffer Objects in pixels      | `512`   |
+| height    | `number`                 | Height of the Frame Buffer Objects in pixels     | `512`   |
+
+## Properties
+
+| Property   | Type                          | Description                                    |
+|------------|-------------------------------|------------------------------------------------|
+| uuid       | `string`                      | Unique identifier for the property manager    |
+| properties | `Map<string, Property>`       | Map of all managed properties                 |
+| fbos       | `Map<string, FBO>`            | Map of all Frame Buffer Objects               |
+| renderer   | `THREE.WebGLRenderer`         | WebGL renderer instance                       |
+| width      | `number`                      | FBO width                                     |
+| height     | `number`                      | FBO height                                    |
+| scene      | `THREE.Scene`                 | Three.js scene for FBO rendering             |
+| camera     | `THREE.OrthographicCamera`    | Orthographic camera for FBO rendering        |
+
+## Methods
+
+### `add(name: string, options?: PropertyOptions): Property`
+
+Adds a new property to the manager.
+
+### `get(name: string): Property | undefined`
+
+Retrieves a property by name.
+
+### `update(propertyNames?: string[]): void`
+
+Updates FBOs. If no property names are provided, updates all FBOs.
+
+### `setUniformsAll(uniforms: Record<string, any>): void`
+
+Sets uniforms on all FBOs.
+
+### `addConstraint(propertyName: string, constraint: Constraint): void`
+
+Adds a constraint to a specific property.
+
+### `removeConstraint(propertyName: string, constraintName: string): void`
+
+Removes a constraint from a property.
+
+### `dispose(): void`
+
+Disposes of all resources managed by the PropertyManager.
+
+## Example Usage
+
+```typescript
+import { PropertyManager, RadialForce } from 'particlize';
+import * as THREE from 'three';
+
+// Create property manager
+const renderer = new THREE.WebGLRenderer();
+const manager = new PropertyManager({
+  renderer,
+  width: 512,
+  height: 512
+});
+
+// Add properties
+manager.addProperty('position', {
+  size: 3,
+  defaultValue: new Float32Array([0, 0, 0])
+});
+
+manager.addProperty('velocity', {
+  size: 3,
+  defaultValue: new Float32Array([0, 0, 0])
+});
+
+// Add constraints
+const radialForce = new RadialForce({
+  center: [0, 0, 0],
+  strength: 0.1
+});
+manager.addConstraint('velocity', radialForce);
+
+// Inject initial data
+const particleCount = 1000;
+const positionData = new Float32Array(particleCount * 4);
+// ... fill position data ...
+
+manager.inject('position', positionData);
+
+// Update in animation loop
+function animate() {
+  manager.setUniformsAll({
+    u_time: performance.now() / 1000
+  });
+  
+  manager.update();
+  requestAnimationFrame(animate);
+}
+animate();
+```

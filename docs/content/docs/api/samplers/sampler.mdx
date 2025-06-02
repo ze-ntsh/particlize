@@ -1,0 +1,50 @@
+---
+title: Sampler
+description: Abstract base class for particle sampling from various sources
+---
+
+# Sampler
+
+The `Sampler` class is an abstract base class that provides the foundation for sampling particles from various sources.
+
+## Constructor
+
+```typescript
+new Sampler()
+```
+
+## Parameters
+
+This is an abstract class and cannot be instantiated directly.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `geometry` | `THREE.BufferGeometry` | Source geometry for sampling |
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `build()` | Builds the sampler's internal data structures |
+| `sample(target: THREE.Vector3)` | Samples a single point and stores the result |
+| `setWeightAttribute(name: string)` | Sets weight attribute for sampling distribution |
+
+## Example Usage
+
+```typescript
+import { MeshSurfaceSampler } from 'particlize';
+
+// Create sampler
+const sampler = new MeshSurfaceSampler(mesh)
+  .setWeightAttribute('color')
+  .build();
+
+// Sample points
+const position = new THREE.Vector3();
+for (let i = 0; i < particleCount; i++) {
+  sampler.sample(position);
+  // Use position data
+}
+```

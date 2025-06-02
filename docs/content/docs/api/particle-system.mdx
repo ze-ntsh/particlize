@@ -1,0 +1,109 @@
+---
+title: ParticleSystem
+description: The ParticleSystem class is the core component of the Particlize library. It manages particles, their rendering, coordination, and provides the main interface for particle manipulation.
+---
+
+## Constructor
+
+```typescript
+import { ParticleSystem, ParticleSystemParams } from "particlize-js";
+new ParticleSystem(params: ParticleSystemParams)
+```
+
+### Parameters
+
+| Parameter       | Type                                                | Description                                       | Default         |
+| --------------- | --------------------------------------------------- | ------------------------------------------------- | --------------- |
+| canvas          | `HTMLCanvasElement`                                 | The HTML canvas element where particles will be rendered | -             |
+| backgroundColor | `[number, number, number, number]`                  | Background color as RGBA values (0-1)             | `[0, 0, 0, 1]`  |
+| fboHeight       | `number`                                            | Height of Frame Buffer Objects                    | `512`           |
+| fboWidth        | `number`                                            | Width of Frame Buffer Objects                     | `512`           |
+| plugins         | [`ParticlePlugin[]`](/docs/api/plugins/particle-plugin) | Array of plugins to initialize with the system    | [] |
+
+<Callout type="warn" title="Regarding Plugins">
+If no plugins are provided, the system will not render or update particles.
+This is to provide a clean slate for developers to hook into the system and implement their own [`properties`](/docs/api/property-manager) and [`constraints`](/docs/api/constraints/) if desired.
+You can use the [`BasicConstraintsPlugin`](/docs/api/plugins/templates/basic-constraints-plugin) as a starting point.
+</Callout>
+
+
+## Properties
+
+| Property          | Type                                                      | Description                                           |
+|-------------------|-----------------------------------------------------------|-------------------------------------------------------|
+| uuid              | `string`                                                  | Unique identifier for the particle system             |
+| canvas            | `HTMLCanvasElement`                                       | The rendering canvas                                  |
+| scene             | `THREE.Scene`                                             | Three.js scene object                                 |
+| camera            | `THREE.PerspectiveCamera`                                 | Three.js camera                                       |
+| renderer          | `THREE.WebGLRenderer`                                     | Three.js WebGL renderer                               |
+| clock             | `THREE.Clock`                                             | Three.js clock for timing                             |
+| manager           | [`PropertyManager`](/docs/api/property-manager)           | Manages particle properties and FBOs                  |
+| particleCount     | `number`                                                  | Current number of active particles                    |
+| maxParticles      | `number`                                                  | Maximum number of particles (fboWidth * fboHeight)    |
+| particles         | `THREE.Points`                                            | Three.js Points object containing all particles       |
+| particleGeometry  | `THREE.BufferGeometry`                                    | Geometry for particle rendering                       |
+| particleMaterial  | `THREE.ShaderMaterial`                                    | Shader material for particles                         |
+| plugins           | [`ParticlePlugin[]`](/docs/api/plugins/particle-plugin)   | Array of active plugins                               |
+
+## Methods
+
+### `addParticles(frame: Frame): void`
+
+Adds particles from a Frame to the particle system.
+
+### `linkProperty(propertyName: string): void`
+
+Links a property from the [`PropertyManager`](/docs/api/property-manager) to the particle shader material.
+The texture for the property's FBO will be addded to the shader material as a uniform.
+The uniform name will be the `textutreName` of the associated [`FBO`](/docs/api/fbo).
+
+
+### `update(): void`
+
+Manually updates the particle system for one frame.
+
+### `resize(): void`
+
+Handles canvas resize events. Called automatically on window resize.
+
+### `dispose(): void`
+
+Cleans up all resources and disposes of the particle system.
+
+## Performance Considerations
+
+- **FBO Size**: The `fboWidth * fboHeight` determines the maximum number of particles and the memory usage. Larger sizes require more GPU memory.
+- **Intersection Observer**: The system automatically pauses updates when the canvas is not visible
+- **Plugin Performance**: Heavy computations in plugins can impact frame rate
+
+## Example Usage
+
+```typescript
+import { ParticleSystem, Frame, Particle } from "particlize";
+
+// Create particle system
+const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+const system = new ParticleSystem({
+  canvas,
+  backgroundColor: [0, 0, 0, 1],
+  fboWidth: 512,
+  fboHeight: 512,
+});
+
+// Create particles
+const particles = Array.from(
+  { length: 1000 },
+  (_, i) =>
+    new Particle({
+      position: new Float32Array([Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1]),
+    })
+);
+
+// Add particles to system
+const frame = new Frame({ particles });
+system.addParticles(frame);
+
+// Link properties and start
+system.linkProperty("position");
+system.start();
+```

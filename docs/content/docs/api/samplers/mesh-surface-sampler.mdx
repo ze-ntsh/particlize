@@ -1,0 +1,62 @@
+---
+title: MeshSurfaceSampler
+description: Utility class for sampling weighted random points on the surface of a mesh
+---
+
+# MeshSurfaceSampler
+
+The `MeshSurfaceSampler` class provides efficient random sampling of points on the surface of a mesh.
+
+## Constructor
+
+```typescript
+new MeshSurfaceSampler(mesh: THREE.Mesh)
+```
+
+## Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mesh` | `THREE.Mesh` | The surface mesh from which to sample points |
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `geometry` | `THREE.BufferGeometry` | The mesh geometry being sampled |
+| `weightAttribute` | `THREE.BufferAttribute \| null` | Attribute used for weighted sampling |
+| `distribution` | `Float32Array \| null` | Cumulative distribution for sampling |
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `setWeightAttribute(name: string \| null)` | Sets vertex attribute to use as weight for sampling |
+| `setRandomGenerator(randomFunction: () => number)` | Sets custom random number generator |
+| `build()` | Processes geometry and prepares sampler for sampling |
+| `sample(targetPosition: Vector3, targetNormal?: Vector3, targetColor?: Color, targetUV?: Vector2)` | Samples a random point on the surface |
+
+## Example Usage
+
+```typescript
+import { MeshSurfaceSampler } from 'particlize';
+import * as THREE from 'three';
+
+// Create mesh
+const geometry = new THREE.SphereGeometry(1, 32, 32);
+const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+
+// Create and build sampler
+const sampler = new MeshSurfaceSampler(mesh)
+  .setWeightAttribute('color')
+  .build();
+
+// Sample points
+const position = new THREE.Vector3();
+const normal = new THREE.Vector3();
+
+for (let i = 0; i < 1000; i++) {
+  sampler.sample(position, normal);
+  // Use sampled position and normal
+}
+```

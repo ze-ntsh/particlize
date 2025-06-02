@@ -8,7 +8,7 @@ import particleVertex from "@/shaders/particle.vert?raw";
 import particleFragment from "@/shaders/particle.frag?raw";
 
 import { PropertyManager } from "@/PropertyManager";
-import { RenderTargetVisualizer } from "@/RenderTargetVisualizer";
+import { RenderTargetVisualizer } from "@/utils/RenderTargetVisualizer";
 import { Frame } from "@/frames/Frame";
 import { ParticlePlugin } from "./plugins/Plugin";
 
@@ -58,6 +58,10 @@ export class ParticleSystem extends EventTarget {
   particles: THREE.Points;
   particleCount: number = 0;
   maxParticles: number;
+
+  // Intersection observer
+  intersectionObserver: IntersectionObserver;
+  inView: boolean = true;
 
   constructor({ canvas, backgroundColor = [0, 0, 0, 1], fboHeight = 512, fboWidth = 512, plugins = [] }: ParticleSystemParams) {
     super();
@@ -142,11 +146,23 @@ export class ParticleSystem extends EventTarget {
       this.resize();
     });
 
+    // Intersection observer for canvas visibility
+    this.intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        this.inView = entry.isIntersecting;
+      },
+      { threshold: 0.01 }
+    );
+    this.intersectionObserver.observe(this.canvas);
+
     // Plugins
     this.plugins = plugins;
     for (const plugin of this.plugins) {
       plugin.onInit && plugin.onInit(this);
     }
+
+    // Build the property manager
+    this.manager.build();
   }
 
   linkProperty(propertyName: string) {
@@ -191,50 +207,15 @@ export class ParticleSystem extends EventTarget {
     frame.dispose();
   }
 
-  morphTo(frame: Frame) {
-    if (frame.count > this.maxParticles) {
-      console.warn("Frame has more particles than the maximum allowed, cannot morph");
-      return;
-    }
-
-    frame.build(this.manager);
-    if (frame.count < this.particleCount) {
-      const originData = new Float32Array(this.particleCount * 4);
-      // Repeat the target origins to fill the particle count
-      for (let i = 0; i < this.particleCount; i++) {
-        const particle = frame.particles[i % frame.count];
-        originData.set([particle.position[0], particle.position[1], particle.position[2], 1.0], i * 4);
-      }
-
-      this.manager.inject("origin", originData);
-      this.manager.update(["origin"]);
-    } else {
-      // Create a new array with the same size as the target
-      const originData = new Float32Array(frame.count * 4);
-
-      // Copy the target origins to the new array
-      for (let i = 0; i < frame.count; i++) {
-        const particle = frame.particles[i];
-        originData.set([particle.position[0], particle.position[1], particle.position[2], 1.0], i * 4);
-      }
-
-      // Inject the data into the FBOs
-      this.manager.inject("origin", originData);
-      this.manager.update(["origin"]);
-    }
-
-    // Update particle count
-    this.particleCount = frame.count;
-    this.particleGeometry.setDrawRange(0, this.particleCount);
-  }
-
   update() {
+    // Check if the canvas is in view
+    if (!this.inView) return;
+
     // Update logic
     const delta = this.clock.getDelta();
     const time = this.clock.getElapsedTime();
 
     // Raycaster
-
     this.manager.setUniformsAll({
       u_time: time,
       u_delta: delta,

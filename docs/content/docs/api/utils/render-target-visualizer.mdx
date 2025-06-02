@@ -1,0 +1,389 @@
+---
+title: RenderTargetVisualizer
+description: Debug utility for visualizing FBO render targets in a grid layout
+---
+
+# RenderTargetVisualizer
+
+The `RenderTargetVisualizer` class is a debug utility that visualizes FBO (Frame Buffer Object) render targets in a grid layout. This tool is essential for debugging particle systems, understanding data flow, and monitoring GPU texture contents during development.
+
+## Constructor
+
+```typescript
+new RenderTargetVisualizer(renderer: THREE.WebGLRenderer)
+```
+
+### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `renderer` | `THREE.WebGLRenderer` | The Three.js WebGL renderer to use for visualization |
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `uuid` | `string` | Unique identifier for the visualizer instance |
+| `scene` | `THREE.Scene` | Three.js scene containing the visualization |
+| `camera` | `THREE.OrthographicCamera` | Orthographic camera for 2D grid rendering |
+| `canvas` | `HTMLCanvasElement` | HTML canvas element for display |
+| `renderer` | `THREE.WebGLRenderer` | WebGL renderer instance |
+| `labelCanvas` | `OffscreenCanvas` | Offscreen canvas for generating text labels |
+| `labelTexture` | `THREE.Texture` | Texture for rendering labels |
+
+## Basic Usage
+
+```typescript
+import { ParticleSystem, RenderTargetVisualizer } from 'particlize';
+import * as THREE from 'three';
+
+// Create renderer
+const renderer = new THREE.WebGLRenderer();
+document.body.appendChild(renderer.domElement);
+
+// Create particle system
+const particleSystem = new ParticleSystem({ canvas: renderer.domElement });
+
+// Setup properties
+particleSystem.manager
+  .add('position', 3)
+  .add('velocity', 3, new Float32Array([0, 0, 0]))
+  .add('color', 4, new Float32Array([1, 0, 1, 1]))
+  .build();
+
+// Create visualizer
+const visualizer = new RenderTargetVisualizer(renderer);
+
+// Update and render loop
+function animate() {
+  // Update particle system
+  particleSystem.update();
+  
+  // Update visualizer with FBOs
+  const fbos = new Map();
+  particleSystem.manager.properties.forEach((property, name) => {
+    fbos.set(name, property.fbo);
+  });
+  
+  visualizer.update(fbos);
+  visualizer.render();
+  
+  requestAnimationFrame(animate);
+}
+animate();
+```
+
+## Methods
+
+### update(fbos: Map&lt;string, FBO&gt;)
+
+Updates the visualizer with the current FBO textures to display.
+
+```typescript
+// Collect FBOs from particle system
+const fbos = new Map();
+particleSystem.manager.properties.forEach((property, name) => {
+  fbos.set(name, property.fbo);
+});
+
+// Update visualizer
+visualizer.update(fbos);
+```
+
+### render()
+
+Renders the current visualization grid to the screen.
+
+```typescript
+visualizer.render();
+```
+
+### resize()
+
+Handles window resize events. Called automatically on window resize.
+
+```typescript
+// Manual resize (called automatically)
+visualizer.resize();
+```
+
+### makeLabelSprite(text: string): THREE.Sprite
+
+Creates a text label sprite for FBO identification.
+
+```typescript
+const label = visualizer.makeLabelSprite("position");
+scene.add(label);
+```
+
+### dispose()
+
+Cleans up resources and removes the canvas from the DOM.
+
+```typescript
+visualizer.dispose();
+```
+
+## Grid Layout
+
+The visualizer automatically arranges FBO textures in a grid:
+
+- **Automatic Sizing**: Grid dimensions calculated based on FBO count
+- **Aspect Ratio**: Maintains screen aspect ratio for optimal layout
+- **Spacing**: Automatic spacing between texture tiles
+- **Labels**: Text labels identify each FBO texture
+- **Normalization**: Texture values normalized from [-1, 1] to [0, 1] for display
+
+### Grid Calculation
+
+```typescript
+// Grid dimensions
+const screenAspect = window.innerWidth / window.innerHeight;
+const gridCols = Math.ceil(Math.sqrt(count * screenAspect));
+const gridRows = Math.ceil(count / gridCols);
+
+// Tile sizing
+const tileSize = 1.8 / Math.max(gridCols, gridRows);
+const spacing = tileSize * 0.1;
+```
+
+## Texture Normalization
+
+FBO textures often contain values in the range [-1, 1], which are normalized for display:
+
+```glsl
+// Fragment shader for texture display
+vec3 color = texture2D(uTexture, vUv).xyz;
+// Normalize from [-1, 1] to [0, 1]
+gl_FragColor = vec4((color + 1.0) * 0.5, 1.0);
+```
+
+## Integration Examples
+
+### With PropertyManager
+
+```typescript
+import { ParticleSystem, RenderTargetVisualizer, BasicConstraintsPlugin } from 'particlize';
+
+const particleSystem = new ParticleSystem({ canvas });
+const plugin = new BasicConstraintsPlugin();
+plugin.onInit(particleSystem);
+
+// Create visualizer
+const visualizer = new RenderTargetVisualizer(renderer);
+
+function animate() {
+  plugin.onUpdate(particleSystem);
+  particleSystem.update();
+  
+  // Visualize all FBOs
+  const fbos = new Map();
+  particleSystem.manager.properties.forEach((property, name) => {
+    fbos.set(name, property.fbo);
+  });
+  
+  visualizer.update(fbos);
+  visualizer.render();
+  
+  requestAnimationFrame(animate);
+}
+```
+
+### Selective Visualization
+
+```typescript
+// Only visualize specific FBOs
+const selectedFBOs = new Map();
+const propertiesToShow = ['position', 'velocity', 'color'];
+
+propertiesToShow.forEach(propName => {
+  const property = particleSystem.manager.properties.get(propName);
+  if (property) {
+    selectedFBOs.set(propName, property.fbo);
+  }
+});
+
+visualizer.update(selectedFBOs);
+```
+
+### Debug Mode Toggle
+
+```typescript
+class DebugParticleSystem {
+  private visualizer?: RenderTargetVisualizer;
+  private debugMode = false;
+  
+  constructor(private particleSystem: ParticleSystem, private renderer: THREE.WebGLRenderer) {}
+  
+  toggleDebug() {
+    this.debugMode = !this.debugMode;
+    
+    if (this.debugMode && !this.visualizer) {
+      this.visualizer = new RenderTargetVisualizer(this.renderer);
+    } else if (!this.debugMode && this.visualizer) {
+      this.visualizer.dispose();
+      this.visualizer = undefined;
+    }
+  }
+  
+  render() {
+    this.particleSystem.render();
+    
+    if (this.debugMode && this.visualizer) {
+      const fbos = new Map();
+      this.particleSystem.manager.properties.forEach((property, name) => {
+        fbos.set(name, property.fbo);
+      });
+      
+      this.visualizer.update(fbos);
+      this.visualizer.render();
+    }
+  }
+}
+```
+
+## Advanced Usage
+
+### Custom Visualization
+
+```typescript
+class CustomRenderTargetVisualizer extends RenderTargetVisualizer {
+  update(fbos: Map<string, any>) {
+    // Custom grid layout logic
+    super.update(fbos);
+    
+    // Add custom visualization elements
+    this.addCustomOverlay();
+  }
+  
+  private addCustomOverlay() {
+    // Add performance metrics, frame rate, etc.
+    const geometry = new THREE.PlaneGeometry(0.2, 0.1);
+    const material = new THREE.MeshBasicMaterial({ 
+      color: 0x00ff00, 
+      transparent: true, 
+      opacity: 0.5 
+    });
+    const overlay = new THREE.Mesh(geometry, material);
+    overlay.position.set(-0.8, 0.8, 0.1);
+    this.scene.add(overlay);
+  }
+}
+```
+
+### Multiple Visualizer Windows
+
+```typescript
+class MultiWindowVisualizer {
+  private visualizers: RenderTargetVisualizer[] = [];
+  
+  constructor(private renderers: THREE.WebGLRenderer[]) {
+    this.visualizers = renderers.map(renderer => 
+      new RenderTargetVisualizer(renderer)
+    );
+  }
+  
+  update(fboGroups: Map<string, any>[]) {
+    fboGroups.forEach((fbos, index) => {
+      if (this.visualizers[index]) {
+        this.visualizers[index].update(fbos);
+      }
+    });
+  }
+  
+  render() {
+    this.visualizers.forEach(visualizer => visualizer.render());
+  }
+}
+```
+
+## Development Workflow
+
+### Integration with Development Tools
+
+```typescript
+// Debug panel integration
+class ParticleDebugPanel {
+  private visualizer: RenderTargetVisualizer;
+  private stats: Stats;
+  
+  constructor(particleSystem: ParticleSystem, renderer: THREE.WebGLRenderer) {
+    this.visualizer = new RenderTargetVisualizer(renderer);
+    this.stats = new Stats();
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'v') {
+        this.toggleVisualization();
+      }
+    });
+  }
+  
+  toggleVisualization() {
+    // Toggle visualizer display
+  }
+  
+  update(particleSystem: ParticleSystem) {
+    this.stats.begin();
+    
+    // Update visualization
+    const fbos = new Map();
+    particleSystem.manager.properties.forEach((property, name) => {
+      fbos.set(name, property.fbo);
+    });
+    
+    this.visualizer.update(fbos);
+    this.visualizer.render();
+    
+    this.stats.end();
+  }
+}
+```
+
+## Best Practices
+
+1. **Development Only**: Use visualizer only during development, not in production
+2. **Performance**: Disable visualizer in production builds
+3. **Memory**: Call `dispose()` when no longer needed
+4. **Layout**: Visualizer creates its own canvas, manage z-index appropriately
+5. **Updates**: Update visualizer after particle system updates
+
+## Performance Considerations
+
+- **Render Overhead**: Adds rendering overhead for texture display
+- **Memory Usage**: Creates additional textures and materials
+- **GPU Load**: Additional draw calls for each FBO texture
+- **Canvas Elements**: Creates additional DOM elements
+- **Development Tool**: Should be disabled in production
+
+## Troubleshooting
+
+### No Textures Displayed
+- Verify FBOs are properly built and contain data
+- Check that the WebGL renderer is compatible
+- Ensure textures are not empty or corrupted
+
+### Layout Issues
+- Check window resize handling
+- Verify grid calculations with different FBO counts
+- Test with various screen aspect ratios
+
+### Performance Problems
+- Limit the number of FBOs being visualized
+- Reduce visualization update frequency
+- Use lower resolution for visualization textures
+
+### Memory Leaks
+- Always call `dispose()` when done
+- Check for proper cleanup of textures and materials
+- Monitor memory usage during development
+
+## Debugging Information
+
+The visualizer provides several debugging benefits:
+
+- **Data Validation**: Visual confirmation of texture contents
+- **Flow Tracking**: Understanding data flow between FBOs
+- **Performance Monitoring**: Identifying GPU memory usage
+- **Constraint Verification**: Seeing the effects of constraints
+- **Iteration Speed**: Quick visual feedback during development

@@ -1,7 +1,7 @@
 // Particle System
 import { ParticleSystem } from "@/ParticleSystem";
 import { Particle } from "@/Particle";
-import { RenderTargetVisualizer } from "@/RenderTargetVisualizer";
+import { RenderTargetVisualizer } from "@/utils/RenderTargetVisualizer";
 
 console.log("Hello from particlize");
 

@@ -21,7 +21,7 @@
     import { SamplerFrame, Frame } from "./src/frames";
     import { textToMesh } from "./src/utils";
     import { MeshSurfaceSampler } from "./src/samplers";
-    import { BasicConstraintsPlugin } from "./src/plugins/templates"
+    import { BasicConstraintsPlugin } from "./src/plugins/templates";
     import * as THREE from "three";
     import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
@@ -38,25 +38,18 @@
 
     ps.addParticles(
       new SamplerFrame({
-      sampler: new MeshSurfaceSampler(
-        new THREE.Mesh(
-          new THREE.TorusGeometry(0.5, 0.2, 16, 100),
-          new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-        )
-      ),
-      count: 100000,
-    }));
+        sampler: new MeshSurfaceSampler(new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.2, 16, 100), new THREE.MeshBasicMaterial({ color: 0x00ff00 }))),
+        count: 100000,
+      })
+    );
 
     const knotSamplerFrame = new SamplerFrame({
       sampler: new MeshSurfaceSampler(
-      new THREE.Mesh(
-        new THREE.TorusKnotGeometry(0.4, 0.15, 100, 32, 3, 4),
-        new THREE.MeshBasicMaterial({ color: 0x00ffff })
-      )
+        new THREE.Mesh(new THREE.TorusKnotGeometry(0.4, 0.15, 100, 32, 3, 4), new THREE.MeshBasicMaterial({ color: 0x00ffff }))
       ),
       count: 100000,
     });
-    
+
     const animate = () => {
       requestAnimationFrame(animate);
       ps.update();
@@ -67,6 +60,5 @@
     setTimeout(() => {
       ps.morphTo(knotSamplerFrame);
     }, 5000);
-
   </script>
 </html>

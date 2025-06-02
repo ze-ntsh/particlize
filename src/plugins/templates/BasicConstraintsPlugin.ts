@@ -4,6 +4,7 @@ import { Constraint } from "@/constraints";
 import { OriginRestoringForce } from "@/constraints/forces";
 import * as THREE from "three";
 import { FBO } from "@/FBO";
+import { Frame } from "@/frames";
 
 export class BasicConstraintsPlugin implements ParticlePlugin {
   name = "BasicConstraintsPlugin";
@@ -106,8 +107,7 @@ export class BasicConstraintsPlugin implements ParticlePlugin {
       .constrain("position", positionConstraint)
       .constrain("force", originRestoringForce)
       .constrain("lifetime", lifetimeConstraint)
-      .constrain("color", colorConstraint)
-      .build();
+      .constrain("color", colorConstraint);
 
     // Link the FBOs to the particle material
     const positionFBO = system.manager.properties.get("position")?.fbo as FBO;
@@ -130,6 +130,44 @@ export class BasicConstraintsPlugin implements ParticlePlugin {
     system.manager.setUniforms("velocity", {
       u_mouse: null,
     });
+
+    // Add a morph function to the system
+    system.morphTo = (target: Frame) => {
+      if (target.count > system.maxParticles) {
+        console.warn("Frame has more particles than the maximum allowed, cannot morph");
+        return;
+      }
+
+      target.build(system.manager);
+      if (target.count < system.particleCount) {
+        const originData = new Float32Array(system.particleCount * 4);
+        // Repeat the target origins to fill the particle count
+        for (let i = 0; i < system.particleCount; i++) {
+          const particle = target.particles[i % target.count];
+          originData.set([particle.position[0], particle.position[1], particle.position[2], 1.0], i * 4);
+        }
+
+        system.manager.inject("origin", originData);
+        system.manager.update(["origin"]);
+      } else {
+        // Create a new array with the same size as the target
+        const originData = new Float32Array(target.count * 4);
+
+        // Copy the target origins to the new array
+        for (let i = 0; i < target.count; i++) {
+          const particle = target.particles[i];
+          originData.set([particle.position[0], particle.position[1], particle.position[2], 1.0], i * 4);
+        }
+
+        // Inject the data into the FBOs
+        system.manager.inject("origin", originData);
+        system.manager.update(["origin"]);
+      }
+
+      // Update particle count
+      system.particleCount = target.count;
+      system.particleGeometry.setDrawRange(0, system.particleCount);
+    };
   }
 
   onUpdate(system: ParticleSystem): void {

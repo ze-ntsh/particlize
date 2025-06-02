@@ -1,0 +1,49 @@
+---
+title: Property
+description: Represents a property within a Frame Buffer Object (FBO) for particle data
+---
+
+## Constructor
+This class is typically not instantiated directly by users.
+Instead, it is created by the [`PropertyManager`](/docs/api/property-manager) when adding a new property to a particle system.
+The docs for this class are provided for reference only for developers who may need to understand its structure and usage. 
+It is used to define properties such as position, velocity, color, etc., for particles within a Frame Buffer Object [FBO](/docs/api/fbo).
+
+```typescript
+import { Property } from 'particlize-js';
+new Property(name: string, size: number, defaultValue?: Float32Array, fbo?: FBO)
+```
+
+
+### Parameters
+
+| Parameter    | Type                   | Description                                        | Default     |
+| ------------ | ---------------------- | -------------------------------------------------- | ----------- |
+| name         | `string`               | Unique name for the property                       | -           |
+| size         | `number`               | Number of components (1-4)                         | -           |
+| defaultValue | `Float32Array`         | Default value for the property                     | zero array  |
+| fbo          | [`FBO`](/docs/api/fbo) | The FBO instance this property belongs to          | -           |
+
+## Properties
+
+| Property      | Type                              | Description                                   |
+|---------------|-----------------------------------|-----------------------------------------------|
+| name          | `string`                          | Unique identifier for the property            |
+| size          | `number`                          | Number of components (1-4). Eg: scalars have 1, vectors have 2-4 (position(x, y, z), color(r, g, b, a), etc.) |
+| defaultValue  | `Float32Array`                    | Default value for new particles               |
+| fbo           | [`FBO`](/docs/api/fbo)            | The FBO instance this property belongs to     |
+| channelOffset | `number`                          | Channel this property is stored in within the FBO |
+
+## Methods
+
+### `validate(): void`
+
+Validates the property configuration during construction.
+
+### `getData(): Float32Array`
+
+Gets the current property data from the FBO.
+
+### `setData(data: Float32Array): void`
+
+Sets property data in the FBO.

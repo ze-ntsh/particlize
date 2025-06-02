@@ -1,0 +1,459 @@
+---
+title: OriginRestoringForce
+description: Constraint that applies spring-like force to restore particles to their original positions
+---
+
+## Constructor
+
+```typescript
+new OriginRestoringForce(params?: OriginRestoringForceParams)
+```
+
+### Parameters
+
+| Parameter | Type                           | Description                     | Default |
+| --------- | ------------------------------ | ------------------------------- | ------- |
+| params    | `OriginRestoringForceParams`   | Configuration parameters        | `{}`    |
+
+## Properties
+
+| Property | Type      | Description                          |
+|----------|-----------|--------------------------------------|
+| name     | `string`  | Unique identifier for the constraint |
+| active   | `boolean` | Whether the constraint is active     |
+| glsl     | `string`  | GLSL shader code for the force       |
+| strength | `number`  | Spring force strength                |
+
+## Methods
+
+### `build(): void`
+
+Builds the GLSL shader code for the origin restoring force.
+
+### `setStrength(strength: number): void`
+
+Updates the strength of the restoring force.
+
+## Example Usage
+
+```typescript
+import { OriginRestoringForce, PropertyManager } from 'particlize';
+
+// Create origin restoring force with default strength
+const restoringForce = new OriginRestoringForce({
+  strength: { value: 0.05, hardcode: false }
+});
+
+// Create strong restoring force
+const strongRestoring = new OriginRestoringForce({
+  strength: { value: 0.2, hardcode: true }
+});
+
+// Add to property manager
+const propertyManager = new PropertyManager({ /* ... */ });
+propertyManager.addProperty('velocity', { size: 3 });
+propertyManager.addProperty('originalPosition', { size: 3 });
+propertyManager.addConstraint('velocity', restoringForce);
+
+// Update force strength dynamically
+restoringForce.setStrength(0.1);
+```
+
+```typescript
+import { OriginRestoringForce } from 'particlize';
+
+// Basic spring force
+const spring = new OriginRestoringForce('spring', {
+  strength: { value: 0.1, hardcode: false }
+});
+
+// Strong restoring force
+const strongSpring = new OriginRestoringForce('strongSpring', {
+  strength: { value: 1.0, hardcode: true }
+});
+
+// Default parameters
+const defaultSpring = new OriginRestoringForce('default');
+```
+
+## Properties
+
+### Default Parameters
+
+```typescript
+static readonly defaultParams: OriginRestoringForceParams = {
+  strength: { value: 10, hardcode: false }
+};
+```
+
+### Instance Properties
+
+- **`name`**: `string` - Constraint name
+- **`params`**: `OriginRestoringForceParams` - Spring parameters
+- **`glsl`**: `string` - Generated GLSL code
+- **`uniforms`**: `Record<string, any>` - Shader uniforms (for non-hardcoded params)
+
+## GLSL Implementation
+
+The OriginRestoringForce generates the following GLSL code:
+
+```glsl
+float d_forceName = 2.0 * sqrt(STRENGTH);
+
+vec3 restoring_forceName = (origin - position) * STRENGTH;
+vec3 damping_forceName = -velocity * d_forceName;
+
+vec3 acceleration_forceName = restoring_forceName + damping_forceName;
+force = acceleration_forceName * mass;
+```
+
+Where:
+- `STRENGTH` is replaced with the strength parameter value or uniform
+- `forceName` is the constraint name for variable namespacing
+- `origin` is the particle's original position property
+- The damping coefficient is calculated as `2.0 * sqrt(strength)` for critical damping
+
+## Physics Model
+
+The constraint implements a damped harmonic oscillator:
+
+```
+F = -k(x - x₀) - c*v
+```
+
+Where:
+- **k** is the spring constant (strength parameter)
+- **x** is the current position
+- **x₀** is the origin position
+- **c** is the damping coefficient (calculated as 2√k for critical damping)
+- **v** is the velocity
+
+## Usage Examples
+
+### Basic Spring Behavior
+
+```typescript
+import { OriginRestoringForce, PropertyManager } from 'particlize';
+
+// Create spring force
+const spring = new OriginRestoringForce('spring', {
+  strength: { value: 0.1, hardcode: false }
+});
+
+// Apply to force property (which affects velocity)
+propertyManager.constrain('force', spring);
+```
+
+### Cloth Simulation
+
+```typescript
+// Setup for cloth-like behavior
+propertyManager
+  .add('origin', 3)      // Store original positions
+  .add('position', 3)    // Current positions
+  .add('velocity', 3, new Float32Array([0, 0, 0]))
+  .add('force', 3, new Float32Array([0, 0, 0]))
+  .add('mass', 1, new Float32Array([1.0]));
+
+// Weak spring for cloth flexibility
+const clothSpring = new OriginRestoringForce('clothSpring', {
+  strength: { value: 0.05, hardcode: false }
+});
+
+propertyManager.constrain('force', clothSpring);
+```
+
+### Elastic Deformation
+
+```typescript
+// Strong springs for elastic materials
+const elasticForce = new OriginRestoringForce('elastic', {
+  strength: { value: 2.0, hardcode: true }
+});
+
+propertyManager.constrain('force', elasticForce);
+```
+
+### Dynamic Spring Strength
+
+```typescript
+// Use uniforms for runtime strength adjustment
+const variableSpring = new OriginRestoringForce('variable', {
+  strength: { value: 0.1, hardcode: false }
+});
+
+propertyManager.constrain('force', variableSpring);
+
+// Update strength during animation
+function updateSpringStrength(newStrength: number) {
+  propertyManager.setUniforms('force', {
+    u_variable_strength: newStrength
+  });
+}
+
+// Example: Increase stiffness over time
+updateSpringStrength(Math.sin(time) * 0.5 + 0.5);
+```
+
+### Multiple Spring Systems
+
+```typescript
+// Primary restoring force
+const primarySpring = new OriginRestoringForce('primary', {
+  strength: { value: 0.2, hardcode: true }
+});
+
+// Secondary stabilizing force
+const secondarySpring = new OriginRestoringForce('secondary', {
+  strength: { value: 0.05, hardcode: false }
+});
+
+propertyManager
+  .constrain('force', primarySpring)
+  .constrain('force', secondarySpring);
+```
+
+### Interactive Spring System
+
+```typescript
+class InteractiveSpringSystem {
+  private spring: OriginRestoringForce;
+  private propertyManager: PropertyManager;
+
+  constructor(propertyManager: PropertyManager) {
+    this.propertyManager = propertyManager;
+    
+    this.spring = new OriginRestoringForce('interactive', {
+      strength: { value: 0.1, hardcode: false }
+    });
+    
+    propertyManager.constrain('force', this.spring);
+  }
+
+  setStiffness(stiffness: number) {
+    this.propertyManager.setUniforms('force', {
+      u_interactive_strength: stiffness
+    });
+  }
+
+  // Make springs stiffer when particles are disturbed
+  updateStiffness(disturbanceLevel: number) {
+    const baseStiffness = 0.1;
+    const maxStiffness = 1.0;
+    const stiffness = baseStiffness + disturbanceLevel * maxStiffness;
+    this.setStiffness(stiffness);
+  }
+}
+```
+
+## Parameter Configuration
+
+### Strength Values
+
+```typescript
+// Very weak spring (fluid-like)
+new OriginRestoringForce('fluid', {
+  strength: { value: 0.01, hardcode: true }
+});
+
+// Medium spring (cloth-like)
+new OriginRestoringForce('cloth', {
+  strength: { value: 0.1, hardcode: false }
+});
+
+// Strong spring (elastic solid)
+new OriginRestoringForce('solid', {
+  strength: { value: 1.0, hardcode: true }
+});
+
+// Very strong spring (rigid)
+new OriginRestoringForce('rigid', {
+  strength: { value: 10.0, hardcode: true }
+});
+```
+
+### Hardcoded vs Uniform
+
+```typescript
+// Static spring strength (better performance)
+const staticSpring = new OriginRestoringForce('static', {
+  strength: { value: 0.5, hardcode: true }
+});
+
+// Dynamic spring strength (updateable)
+const dynamicSpring = new OriginRestoringForce('dynamic', {
+  strength: { value: 0.5, hardcode: false }
+});
+```
+
+## Integration with ParticleSystem
+
+```typescript
+import { ParticleSystem, OriginRestoringForce, SamplerFrame } from 'particlize';
+
+const particleSystem = new ParticleSystem({ canvas });
+
+// Setup properties with origin tracking
+particleSystem.manager
+  .add('origin', 3)      // Original positions
+  .add('position', 3)    // Current positions  
+  .add('velocity', 3, new Float32Array([0, 0, 0]))
+  .add('force', 3, new Float32Array([0, 0, 0]))
+  .add('mass', 1, new Float32Array([1.0]));
+
+// Add spring constraint
+const spring = new OriginRestoringForce('mainSpring', {
+  strength: { value: 0.2, hardcode: false }
+});
+
+particleSystem.manager.constrain('force', spring);
+
+// Add particles (origin will be set to initial positions)
+const frame = new SamplerFrame({ sampler, count: 5000 });
+particleSystem.addParticles(frame);
+```
+
+## Damping Behavior
+
+The constraint automatically calculates critical damping:
+
+```
+damping_coefficient = 2 * sqrt(spring_strength)
+```
+
+This provides:
+- **No overshoot**: Particles return to origin without oscillating
+- **Fastest convergence**: Quickest return to equilibrium
+- **Stable behavior**: No energy buildup or instability
+
+### Custom Damping
+
+For custom damping ratios, create a modified constraint:
+
+```typescript
+class CustomDampedSpring extends Constraint {
+  constructor(name: string, strength: number, dampingRatio: number = 1.0) {
+    const dampingCoeff = dampingRatio * 2.0 * Math.sqrt(strength);
+    
+    super(name, `
+      vec3 restoring = (origin - position) * ${strength.toFixed(6)};
+      vec3 damping = -velocity * ${dampingCoeff.toFixed(6)};
+      force += (restoring + damping) * mass;
+    `);
+  }
+}
+
+// Under-damped (oscillating)
+const underDamped = new CustomDampedSpring('underDamped', 1.0, 0.5);
+
+// Over-damped (slow return)
+const overDamped = new CustomDampedSpring('overDamped', 1.0, 2.0);
+```
+
+## Performance Considerations
+
+- **Hardcoded Strength**: Better performance for static springs
+- **Origin Property**: Requires additional memory for origin positions
+- **Calculation Cost**: Square root operation for damping coefficient
+- **Multiple Springs**: Each spring adds computational overhead
+
+## Common Use Cases
+
+1. **Cloth Simulation**: Flexible fabric behavior
+2. **Soft Body Physics**: Deformable objects
+3. **Hair/Fur Simulation**: Strand dynamics
+4. **Particle Clouds**: Maintaining shape while allowing movement
+5. **Elastic Structures**: Bouncy, rubber-like materials
+6. **Stabilization**: Preventing particles from drifting too far
+7. **Recovery Systems**: Returning to formation after disturbance
+
+## Best Practices
+
+1. **Origin Setup**: Ensure origin property is properly initialized
+2. **Strength Tuning**: Start with small values (0.01-0.1) and adjust
+3. **Mass Consideration**: Heavier particles need stronger springs
+4. **Performance**: Use hardcoded strength for static scenarios
+5. **Stability**: Avoid extremely high strength values
+6. **Integration**: Combine with velocity and position update constraints
+
+## Troubleshooting
+
+### Common Issues
+
+```typescript
+// Issue: No restoring force
+// Solution: Ensure origin property exists and is set
+propertyManager.add('origin', 3); // Must be added before constraint
+
+// Issue: Too oscillatory
+// Solution: The built-in damping should prevent this, check time step
+
+// Issue: Too slow return
+// Solution: Increase strength value
+spring.uniforms.u_springName_strength = 0.5; // Higher value
+
+// Issue: Particles stick to origin
+// Solution: Reduce strength or add other forces
+```
+
+### Debugging
+
+```typescript
+// Log spring parameters
+console.log('Spring strength:', spring.params.strength.value);
+console.log('Is hardcoded:', spring.params.strength.hardcode);
+
+// Check if origin property exists
+const originProperty = propertyManager.properties.get('origin');
+if (!originProperty) {
+  console.error('Origin property not found - spring will not work');
+}
+```
+
+## Advanced Usage
+
+### Anisotropic Springs
+
+```typescript
+// Different strength per axis using custom constraint
+class AnisotropicSpring extends Constraint {
+  constructor(name: string, strengthX: number, strengthY: number, strengthZ: number) {
+    super(name, `
+      vec3 displacement = origin - position;
+      vec3 springForce = displacement * vec3(${strengthX}, ${strengthY}, ${strengthZ});
+      
+      vec3 dampingCoeff = 2.0 * sqrt(vec3(${strengthX}, ${strengthY}, ${strengthZ}));
+      vec3 damping = -velocity * dampingCoeff;
+      
+      force += (springForce + damping) * mass;
+    `);
+  }
+}
+
+const anisotropicSpring = new AnisotropicSpring('anisotropic', 0.1, 0.5, 0.1);
+```
+
+### Non-linear Springs
+
+```typescript
+class NonLinearSpring extends Constraint {
+  constructor(name: string, strength: number, nonlinearity: number = 1.0) {
+    super(name, `
+      vec3 displacement = origin - position;
+      float distance = length(displacement);
+      vec3 direction = normalize(displacement);
+      
+      // Non-linear force: F = k * d^n
+      float forceMagnitude = ${strength} * pow(distance, ${nonlinearity});
+      vec3 springForce = direction * forceMagnitude;
+      
+      force += springForce * mass;
+    `);
+  }
+}
+
+// Quadratic spring (stiffer at distance)
+const quadraticSpring = new NonLinearSpring('quadratic', 0.1, 2.0);
+```
+
+The OriginRestoringForce provides a robust foundation for creating spring-like behaviors in particle systems, offering both stability and natural motion characteristics.

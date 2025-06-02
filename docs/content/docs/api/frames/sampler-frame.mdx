@@ -1,0 +1,251 @@
+---
+title: SamplerFrame
+description: Frame implementation that generates particles using a sampler
+---
+
+## Constructor
+
+```typescript
+new SamplerFrame({ sampler, count }: SamplerFrameParams)
+```
+
+### Parameters
+
+| Parameter | Type      | Description                                       | Default |
+| --------- | --------- | ------------------------------------------------- | ------- |
+| sampler   | `Sampler` | The sampler instance to use for generating particles | -       |
+| count     | `number`  | Number of particles to generate                   | `0`     |
+
+## Properties
+
+| Property | Type      | Description                                       |
+|----------|-----------|---------------------------------------------------|
+| sampler  | `Sampler` | The sampler instance used for particle generation |
+| count    | `number`  | Number of particles to generate                   |
+
+## Methods
+
+### `apply(particleSystem: ParticleSystem): void`
+
+Applies the frame to generate particles using the sampler.
+
+### Example
+
+```typescript
+import { SamplerFrame, MeshSurfaceSampler } from 'particlize';
+import * as THREE from 'three';
+
+// Create a mesh to sample from
+const geometry = new THREE.SphereGeometry(1, 32, 32);
+const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+
+// Create sampler
+const sampler = new MeshSurfaceSampler(mesh).build();
+
+// Create frame with 1000 particles
+const frame = new SamplerFrame({
+  sampler,
+  count: 1000
+});
+```
+
+## Properties
+
+### Core Properties
+
+- **`sampler`**: `Sampler` - The sampler instance used for particle generation
+- **`count`**: `number` - Number of particles to generate (inherited from Frame)
+- **`particles`**: `Particle[]` - Array of generated particles (inherited from Frame)
+
+## Methods
+
+### `build(propertyManager: PropertyManager): void`
+
+Builds the frame by generating particles using the sampler and processing them through the property manager.
+
+```typescript
+// Called automatically when frame is added to particle system
+frame.build(propertyManager);
+```
+
+**Process:**
+1. Calls `sampler.build()` to ensure sampler is ready
+2. Generates `count` particles by sampling positions
+3. Creates `Particle` instances with origin and position properties
+4. Calls parent `build()` method to process particles
+
+### `dispose(): void`
+
+Disposes of the frame resources and clears the particles array.
+
+```typescript
+frame.dispose();
+```
+
+## Usage Examples
+
+### Basic Usage with Surface Sampling
+
+```typescript
+import { SamplerFrame, MeshSurfaceSampler, ParticleSystem } from 'particlize';
+
+// Create geometry
+const geometry = new THREE.IcosahedronGeometry(2, 2);
+const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+
+// Create sampler and frame
+const sampler = new MeshSurfaceSampler(mesh).build();
+const frame = new SamplerFrame({
+  sampler,
+  count: 5000
+});
+
+// Add to particle system
+const particleSystem = new ParticleSystem({ canvas });
+particleSystem.addParticles(frame);
+```
+
+### With Custom Properties
+
+```typescript
+import { SamplerFrame, MeshSurfaceSampler } from 'particlize';
+
+const sampler = new MeshSurfaceSampler(mesh)
+  .setWeightAttribute('color') // Use vertex colors for weighted sampling
+  .build();
+
+const frame = new SamplerFrame({
+  sampler,
+  count: 2000
+});
+
+// Configure property manager with custom properties
+particleSystem.manager
+  .add('position', 3)
+  .add('velocity', 3, new Float32Array([0, 0, 0]))
+  .add('color', 4, new Float32Array([1, 1, 1, 1]))
+  .add('lifetime', 1, new Float32Array([5.0]));
+
+// Add particles
+particleSystem.addParticles(frame);
+```
+
+### Text-based Particle Generation
+
+```typescript
+import { textToMesh, SamplerFrame, MeshSurfaceSampler } from 'particlize';
+
+// Create text mesh
+const textMesh = await textToMesh({
+  text: 'PARTICLIZE',
+  size: 3,
+  depth: 0.5,
+  color: [1, 0.5, 0]
+});
+
+// Sample from text surface
+const sampler = new MeshSurfaceSampler(textMesh).build();
+const frame = new SamplerFrame({
+  sampler,
+  count: 10000
+});
+
+particleSystem.addParticles(frame);
+```
+
+### Multiple Frames from Different Samplers
+
+```typescript
+// Create multiple geometries
+const sphere = new THREE.SphereGeometry(1, 32, 32);
+const box = new THREE.BoxGeometry(2, 2, 2);
+
+// Create separate samplers
+const sphereSampler = new MeshSurfaceSampler(
+  new THREE.Mesh(sphere, new THREE.MeshBasicMaterial())
+).build();
+
+const boxSampler = new MeshSurfaceSampler(
+  new THREE.Mesh(box, new THREE.MeshBasicMaterial())
+).build();
+
+// Create frames
+const sphereFrame = new SamplerFrame({ sampler: sphereSampler, count: 3000 });
+const boxFrame = new SamplerFrame({ sampler: boxSampler, count: 2000 });
+
+// Add both to system
+particleSystem
+  .addParticles(sphereFrame)
+  .addParticles(boxFrame);
+```
+
+## Integration with PropertyManager
+
+The SamplerFrame automatically integrates with the PropertyManager during the build process:
+
+```typescript
+// PropertyManager configuration affects all frames
+particleSystem.manager
+  .add('position', 3)    // Sampled positions
+  .add('velocity', 3, new Float32Array([0, 0, 0]))
+  .add('mass', 1, new Float32Array([1.0]))
+  .group(['position', 'velocity']) // Group for efficiency
+  .linkAll(); // Link properties across FBOs
+
+// Frame inherits these properties
+const frame = new SamplerFrame({ sampler, count: 1000 });
+particleSystem.addParticles(frame);
+```
+
+## Error Handling
+
+The SamplerFrame performs validation during construction and building:
+
+```typescript
+try {
+  // Invalid sampler type
+  const frame = new SamplerFrame({
+    sampler: "not a sampler", // Will throw error
+    count: 1000
+  });
+} catch (error) {
+  console.error(error.message); 
+  // "Invalid sampler provided. Must be an instance of Sampler."
+}
+
+try {
+  // Sampler not built
+  const sampler = new MeshSurfaceSampler(mesh); // Missing .build()
+  const frame = new SamplerFrame({ sampler, count: 1000 });
+  frame.build(propertyManager); // May throw if sampler not ready
+} catch (error) {
+  console.error('Sampler build error:', error.message);
+}
+```
+
+## Performance Considerations
+
+- **Sampler Build**: Ensure samplers are built before creating frames
+- **Particle Count**: Higher counts increase memory usage and processing time
+- **Sampler Complexity**: Complex samplers (e.g., volume sampling) take longer
+- **Frame Reuse**: Create frames once and reuse them when possible
+
+## Best Practices
+
+1. **Build Samplers First**: Always call `sampler.build()` before creating frames
+2. **Reasonable Counts**: Balance particle count with performance requirements
+3. **Property Configuration**: Set up PropertyManager before adding frames
+4. **Error Handling**: Wrap frame creation in try-catch blocks
+5. **Resource Cleanup**: Call `dispose()` when frames are no longer needed
+6. **Sampler Reuse**: Use the same sampler for multiple frames when appropriate
+
+## Inheritance
+
+SamplerFrame extends the base `Frame` class and inherits all its functionality:
+
+- Particle management
+- Property validation
+- Build pipeline integration
+- Disposal methods
+
+[View Frame Documentation →](/docs/api/frames/frame)

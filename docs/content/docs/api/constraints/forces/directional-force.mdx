@@ -1,0 +1,515 @@
+---
+title: DirectionalForce
+description: Constraint that applies constant force in a specific direction
+---
+
+## Constructor
+
+```typescript
+new DirectionalForce(params: DirectionalForceParams)
+```
+
+### Parameters
+
+| Parameter | Type                      | Description                                | Default |
+| --------- | ------------------------- | ------------------------------------------ | ------- |
+| params    | `DirectionalForceParams`  | Configuration parameters for the force    | -       |
+
+## Properties
+
+| Property  | Type                           | Description                          |
+|-----------|--------------------------------|--------------------------------------|
+| name      | `string`                       | Unique identifier for the constraint |
+| active    | `boolean`                      | Whether the constraint is active     |
+| glsl      | `string`                       | GLSL shader code for the force       |
+| strength  | `[number, number, number]`     | Force direction and magnitude        |
+
+## Methods
+
+### `build(): void`
+
+Builds the GLSL shader code for the directional force.
+
+### `setStrength(strength: [number, number, number]): void`
+
+Updates the strength and direction of the force.
+
+## Example Usage
+
+```typescript
+import { DirectionalForce, PropertyManager } from 'particlize';
+
+// Create gravity force
+const gravity = new DirectionalForce({
+  strength: { value: [0, -9.81, 0], hardcode: false }
+});
+
+// Create wind force
+const wind = new DirectionalForce({
+  strength: { value: [2.0, 0, 1.0], hardcode: true }
+});
+
+// Add to property manager
+const propertyManager = new PropertyManager({ /* ... */ });
+propertyManager.addProperty('velocity', { size: 3 });
+propertyManager.addConstraint('velocity', gravity);
+
+// Update force dynamically
+gravity.setStrength([0, -5.0, 0]);
+```
+
+```typescript
+import { DirectionalForce } from 'particlize';
+
+// Gravity force
+const gravity = new DirectionalForce('gravity', {
+  strength: { value: [0, -9.81, 0], hardcode: true }
+});
+
+// Wind force
+const wind = new DirectionalForce('wind', {
+  strength: { value: [2.0, 0, 0.5], hardcode: false }
+});
+
+// Upward acceleration
+const lift = new DirectionalForce('lift', {
+  strength: { value: [0, 5.0, 0], hardcode: false }
+});
+```
+
+## Properties
+
+### Default Parameters
+
+```typescript
+static readonly defaultParams: DirectionalForceParams = {
+  strength: { value: [0, 0, 0], hardcode: false }
+};
+```
+
+### Instance Properties
+
+- **`name`**: `string` - Constraint name
+- **`params`**: `DirectionalForceParams` - Force parameters
+- **`glsl`**: `string` - Generated GLSL code
+- **`uniforms`**: `Record<string, any>` - Shader uniforms (for non-hardcoded params)
+
+## GLSL Implementation
+
+The DirectionalForce generates the following GLSL code:
+
+```glsl
+force = STRENGTH * mass;
+```
+
+Where:
+- `STRENGTH` is replaced with the strength parameter value or uniform
+- The force is applied uniformly to all particles
+- Mass scaling ensures proper physics behavior
+
+## Usage Examples
+
+### Basic Gravity
+
+```typescript
+import { DirectionalForce, PropertyManager } from 'particlize';
+
+// Earth-like gravity
+const gravity = new DirectionalForce('gravity', {
+  strength: { value: [0, -9.81, 0], hardcode: true }
+});
+
+// Apply to force property
+propertyManager.constrain('force', gravity);
+```
+
+### Wind Effects
+
+```typescript
+// Gentle breeze
+const breeze = new DirectionalForce('breeze', {
+  strength: { value: [1.0, 0, 0], hardcode: false }
+});
+
+// Strong wind with vertical component
+const strongWind = new DirectionalForce('strongWind', {
+  strength: { value: [5.0, 1.0, 2.0], hardcode: false }
+});
+
+propertyManager
+  .constrain('force', breeze)
+  .constrain('force', strongWind); // Forces combine additively
+```
+
+### Dynamic Force Direction
+
+```typescript
+// Use uniforms for dynamic force direction
+const dynamicForce = new DirectionalForce('dynamic', {
+  strength: { value: [0, 0, 0], hardcode: false }
+});
+
+propertyManager.constrain('force', dynamicForce);
+
+// Update force direction in animation loop
+function updateForceDirection(direction: THREE.Vector3, magnitude: number) {
+  const force = direction.normalize().multiplyScalar(magnitude);
+  
+  propertyManager.setUniforms('force', {
+    u_dynamic_strength: force.toArray()
+  });
+}
+
+// Example: Force follows mouse
+updateForceDirection(
+  new THREE.Vector3(mouseX, mouseY, 0).sub(centerPoint),
+  2.0
+);
+```
+
+### Multiple Directional Forces
+
+```typescript
+// Gravity
+const gravity = new DirectionalForce('gravity', {
+  strength: { value: [0, -9.81, 0], hardcode: true }
+});
+
+// Wind
+const wind = new DirectionalForce('wind', {
+  strength: { value: [2.0, 0, 0], hardcode: false }
+});
+
+// Magnetic field
+const magnetic = new DirectionalForce('magnetic', {
+  strength: { value: [0, 0, 1.0], hardcode: false }
+});
+
+propertyManager
+  .constrain('force', gravity)
+  .constrain('force', wind)
+  .constrain('force', magnetic);
+```
+
+### Time-varying Forces
+
+```typescript
+class TimeVaryingForce {
+  private force: DirectionalForce;
+  private propertyManager: PropertyManager;
+  private baseStrength: THREE.Vector3;
+
+  constructor(propertyManager: PropertyManager, baseStrength: THREE.Vector3) {
+    this.propertyManager = propertyManager;
+    this.baseStrength = baseStrength.clone();
+    
+    this.force = new DirectionalForce('timeVarying', {
+      strength: { value: [0, 0, 0], hardcode: false }
+    });
+    
+    propertyManager.constrain('force', this.force);
+  }
+
+  update(time: number) {
+    // Sinusoidal variation
+    const factor = Math.sin(time * 2.0) * 0.5 + 0.5; // 0 to 1
+    const currentStrength = this.baseStrength.clone().multiplyScalar(factor);
+    
+    this.propertyManager.setUniforms('force', {
+      u_timeVarying_strength: currentStrength.toArray()
+    });
+  }
+}
+
+// Usage
+const varyingForce = new TimeVaryingForce(
+  propertyManager, 
+  new THREE.Vector3(0, -10, 0)
+);
+
+// In animation loop
+varyingForce.update(performance.now() * 0.001);
+```
+
+### Environmental Forces
+
+```typescript
+// Simulate underwater environment
+const buoyancy = new DirectionalForce('buoyancy', {
+  strength: { value: [0, 2.0, 0], hardcode: true } // Upward
+});
+
+const waterResistance = new DirectionalForce('resistance', {
+  strength: { value: [0, -0.5, 0], hardcode: true } // Slight downward
+});
+
+const current = new DirectionalForce('current', {
+  strength: { value: [1.0, 0, 0.5], hardcode: false } // Horizontal flow
+});
+
+propertyManager
+  .constrain('force', buoyancy)
+  .constrain('force', waterResistance)
+  .constrain('force', current);
+```
+
+### Interactive Directional Forces
+
+```typescript
+class InteractiveForceField {
+  private forces: DirectionalForce[] = [];
+  private propertyManager: PropertyManager;
+
+  constructor(propertyManager: PropertyManager) {
+    this.propertyManager = propertyManager;
+    this.setupForces();
+  }
+
+  private setupForces() {
+    // Create multiple directional forces for different zones
+    const zones = [
+      { name: 'zone1', direction: [1, 0, 0] },
+      { name: 'zone2', direction: [0, 1, 0] },
+      { name: 'zone3', direction: [-1, 0, 0] },
+      { name: 'zone4', direction: [0, -1, 0] }
+    ];
+
+    zones.forEach(zone => {
+      const force = new DirectionalForce(zone.name, {
+        strength: { value: [0, 0, 0], hardcode: false }
+      });
+      
+      this.forces.push(force);
+      this.propertyManager.constrain('force', force);
+    });
+  }
+
+  activateZone(zoneIndex: number, strength: number) {
+    this.forces.forEach((force, index) => {
+      if (index === zoneIndex) {
+        const direction = [
+          [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0]
+        ][index];
+        
+        const forceVector = direction.map(d => d * strength);
+        
+        this.propertyManager.setUniforms('force', {
+          [`u_${force.name}_strength`]: forceVector
+        });
+      } else {
+        // Deactivate other zones
+        this.propertyManager.setUniforms('force', {
+          [`u_${force.name}_strength`]: [0, 0, 0]
+        });
+      }
+    });
+  }
+}
+```
+
+## Parameter Configuration
+
+### Force Strength
+
+```typescript
+// Weak force (subtle effect)
+new DirectionalForce('weak', {
+  strength: { value: [0, -0.1, 0], hardcode: true }
+});
+
+// Medium force (noticeable effect)
+new DirectionalForce('medium', {
+  strength: { value: [0, -2.0, 0], hardcode: false }
+});
+
+// Strong force (dramatic effect)
+new DirectionalForce('strong', {
+  strength: { value: [0, -10.0, 0], hardcode: true }
+});
+
+// Multi-directional force
+new DirectionalForce('multidirectional', {
+  strength: { value: [1.5, -3.0, 0.8], hardcode: false }
+});
+```
+
+### Hardcoded vs Uniform
+
+```typescript
+// Static force (better performance)
+const staticGravity = new DirectionalForce('staticGravity', {
+  strength: { value: [0, -9.81, 0], hardcode: true }
+});
+
+// Dynamic force (updateable at runtime)
+const dynamicWind = new DirectionalForce('dynamicWind', {
+  strength: { value: [2.0, 0, 0], hardcode: false }
+});
+```
+
+## Integration with ParticleSystem
+
+```typescript
+import { ParticleSystem, DirectionalForce, SamplerFrame } from 'particlize';
+
+const particleSystem = new ParticleSystem({ canvas });
+
+// Setup properties
+particleSystem.manager
+  .add('position', 3)
+  .add('velocity', 3, new Float32Array([0, 0, 0]))
+  .add('force', 3, new Float32Array([0, 0, 0]))
+  .add('mass', 1, new Float32Array([1.0]));
+
+// Add gravity
+const gravity = new DirectionalForce('gravity', {
+  strength: { value: [0, -9.81, 0], hardcode: true }
+});
+
+// Add wind
+const wind = new DirectionalForce('wind', {
+  strength: { value: [1.0, 0, 0], hardcode: false }
+});
+
+particleSystem.manager
+  .constrain('force', gravity)
+  .constrain('force', wind);
+
+// Add particles
+const frame = new SamplerFrame({ sampler, count: 5000 });
+particleSystem.addParticles(frame);
+```
+
+## Force Combination
+
+Multiple DirectionalForce constraints are additive:
+
+```typescript
+// Force 1: [1, 0, 0]
+// Force 2: [0, -2, 0]  
+// Force 3: [0.5, 0, 1]
+// Total force: [1.5, -2, 1]
+```
+
+This allows for complex force fields by combining simple directional components.
+
+## Performance Considerations
+
+- **Hardcoded Forces**: Better performance for static forces
+- **Uniform Updates**: Slight overhead for dynamic forces
+- **Force Count**: Each force adds minimal computational cost
+- **Memory Usage**: Uniforms consume GPU memory
+
+## Common Use Cases
+
+1. **Gravity**: Downward acceleration for realistic physics
+2. **Wind**: Horizontal forces for atmospheric effects
+3. **Magnetic Fields**: Directional pull/push forces
+4. **Conveyor Belts**: Constant transport forces
+5. **Acceleration Zones**: Speed boosts in specific directions
+6. **Environmental Effects**: Rain, snow, underwater currents
+7. **Game Mechanics**: Jump pads, wind tunnels, force fields
+
+## Best Practices
+
+1. **Force Scaling**: Consider particle mass in force calculations
+2. **Realistic Values**: Use physically plausible force magnitudes
+3. **Performance**: Use hardcoded parameters for static forces
+4. **Combination**: Layer multiple forces for complex effects
+5. **Debugging**: Start with simple forces and add complexity gradually
+6. **Mass Independence**: Consider whether force should depend on mass
+
+## Troubleshooting
+
+### Common Issues
+
+```typescript
+// Issue: No visible effect
+// Solution: Check force magnitude and mass values
+console.log('Force strength:', force.params.strength.value);
+console.log('Particle mass:', /* check mass property */);
+
+// Issue: Forces too strong
+// Solution: Reduce strength values
+force.params.strength.value = [0, -0.1, 0]; // Weaker gravity
+
+// Issue: Inconsistent behavior
+// Solution: Ensure mass property exists and has reasonable values
+propertyManager.add('mass', 1, new Float32Array([1.0]));
+```
+
+### Debugging
+
+```typescript
+// Log all active forces
+const forceProperty = propertyManager.properties.get('force');
+if (forceProperty) {
+  console.log('Active constraints:', forceProperty.fbo.constraints.keys());
+}
+
+// Check uniform values
+console.log('Wind strength uniform:', propertyManager.getUniforms('force'));
+```
+
+## Advanced Usage
+
+### Conditional Forces
+
+```typescript
+// Force that only applies under certain conditions
+class ConditionalDirectionalForce extends Constraint {
+  constructor(name: string, direction: [number, number, number], strength: number) {
+    super(name, `
+      // Only apply force if particle is above ground
+      if (position.y > 0.0) {
+        force += vec3(${direction.join(', ')}) * ${strength} * mass;
+      }
+    `);
+  }
+}
+
+const conditionalGravity = new ConditionalDirectionalForce(
+  'conditionalGravity', 
+  [0, -9.81, 0], 
+  1.0
+);
+```
+
+### Distance-based Forces
+
+```typescript
+// Directional force that weakens with distance from origin
+class DistanceBasedDirectionalForce extends Constraint {
+  constructor(name: string, direction: [number, number, number], strength: number) {
+    super(name, `
+      float distance = length(position);
+      float falloff = 1.0 / (1.0 + distance * 0.1);
+      vec3 forceDirection = vec3(${direction.join(', ')});
+      force += forceDirection * ${strength} * falloff * mass;
+    `);
+  }
+}
+```
+
+### Turbulent Forces
+
+```typescript
+// Directional force with noise-based variation
+class TurbulentDirectionalForce extends Constraint {
+  constructor(name: string, baseDirection: [number, number, number], strength: number) {
+    super(name, `
+      // Add noise to base direction
+      vec3 noiseOffset = vec3(
+        sin(position.x * 0.1 + u_time),
+        cos(position.y * 0.1 + u_time),
+        sin(position.z * 0.1 + u_time)
+      ) * 0.3;
+      
+      vec3 turbulentDirection = vec3(${baseDirection.join(', ')}) + noiseOffset;
+      force += turbulentDirection * ${strength} * mass;
+    `);
+  }
+}
+```
+
+The DirectionalForce constraint provides a simple yet powerful way to create uniform force fields that affect all particles consistently, forming the foundation for many physics-based particle behaviors.

@@ -1,0 +1,322 @@
+---
+title: BasicConstraintsPlugin
+description: A comprehensive plugin providing essential particle constraints and forces
+---
+
+# BasicConstraintsPlugin
+
+The `BasicConstraintsPlugin` is a comprehensive plugin that provides essential particle constraints and forces, including lifetime management, velocity updates, mouse interaction, and basic physics. This plugin serves as a foundation for most particle systems and demonstrates best practices for plugin development.
+
+## Features
+
+- **Lifetime Management**: Automatic particle lifetime countdown and disposal
+- **Color Fading**: Smooth alpha fading based on remaining lifetime
+- **Velocity Updates**: Force-based velocity integration
+- **Mouse Interaction**: Interactive mouse repulsion forces
+- **Position Updates**: Velocity-based position integration
+- **Origin Restoration**: Spring-like forces that pull particles back to origin
+- **Complete Physics Loop**: Full force → acceleration → velocity → position pipeline
+
+## Installation
+
+```typescript
+import { ParticleSystem, BasicConstraintsPlugin } from 'particlize';
+
+const particleSystem = new ParticleSystem({ canvas });
+const plugin = new BasicConstraintsPlugin();
+
+// Apply plugin to system
+plugin.onInit(particleSystem);
+```
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | `string` | Plugin identifier: "BasicConstraintsPlugin" |
+| `description` | `string` | Plugin description and feature summary |
+
+## Provided Properties
+
+The plugin automatically sets up these properties:
+
+| Property | Components | Default Value | Description |
+|----------|------------|---------------|-------------|
+| `origin` | 3 | N/A | Original particle positions for restoration |
+| `position` | 3 | N/A | Current particle positions |
+| `velocity` | 3 | `[0, 0, 0]` | Current particle velocities |
+| `force` | 3 | `[0, 0, 0]` | Accumulated forces on particles |
+| `size` | 1 | `[1]` | Particle sizes |
+| `mass` | 1 | `[1]` | Particle masses |
+| `lifetime` | 1 | `[-1]` | Particle lifetimes (-1 = infinite) |
+| `color` | 4 | `[1, 0, 1, 1]` | Particle colors (RGBA) |
+
+## Provided Constraints
+
+### Lifetime Management
+```glsl
+if (lifetime > 0.0) {
+  lifetime -= u_delta;
+}
+```
+
+### Color Fading
+```glsl
+if(lifetime > 0.0 && lifetime < 1.0) {
+  float fadeAlpha = smoothstep(0.0, 1.0, lifetime);
+  color.a *= fadeAlpha;
+}
+```
+
+### Velocity Updates
+```glsl
+vec3 acceleration = force / mass;
+velocity += acceleration * u_delta;
+
+// Mouse repulsion
+vec2 toParticle = position.xy - u_mouse.xy;
+float dist = length(toParticle);
+if(dist < 0.2 && dist > 0.0) {
+  vec2 dir = normalize(toParticle);
+  float strength = (1.0 - (dist / 0.2)) * 100.0;
+  velocity.xy += dir * strength * u_delta;
+}
+```
+
+### Position Updates
+```glsl
+position += velocity * u_delta;
+```
+
+## Mouse Interaction
+
+The plugin provides automatic mouse interaction setup:
+
+```typescript
+// Mouse tracking
+window.addEventListener("mousemove", (event) => {
+  system.mouse.x = (event.clientX / system.canvas.width) * 2 - 1;
+  system.mouse.y = -(event.clientY / system.canvas.height) * 2 + 1;
+});
+
+// Raycasting for 3D mouse position
+system.raycaster.setFromCamera(system.mouse, system.camera);
+system.raycaster.ray.intersectPlane(system.raycastPlane, system.intersectionPoint);
+```
+
+## Complete Example
+
+```typescript
+import { ParticleSystem, BasicConstraintsPlugin, MeshSurfaceSampler, SamplerFrame } from 'particlize';
+import * as THREE from 'three';
+
+// Create particle system
+const particleSystem = new ParticleSystem({ canvas });
+
+// Apply basic constraints plugin
+const plugin = new BasicConstraintsPlugin();
+plugin.onInit(particleSystem);
+
+// Create particles
+const geometry = new THREE.SphereGeometry(1, 32, 32);
+const sampler = new MeshSurfaceSampler(geometry);
+const frame = new SamplerFrame({ sampler, count: 10000 });
+
+particleSystem.addParticles(frame);
+
+// Render loop
+function animate() {
+  // Update plugin
+  plugin.onUpdate(particleSystem);
+  
+  // Update particle system
+  particleSystem.update();
+  particleSystem.render();
+  
+  requestAnimationFrame(animate);
+}
+animate();
+```
+
+## Customization
+
+### Modifying Plugin Parameters
+
+After initialization, you can modify the plugin's constraints:
+
+```typescript
+// Apply plugin
+plugin.onInit(particleSystem);
+
+// Modify origin restoring force strength
+particleSystem.manager.setUniforms('force', {
+  'u_originRestoringForce_strength': 5.0  // Stronger restoration
+});
+
+// Modify mouse repulsion area
+particleSystem.manager.setUniforms('velocity', {
+  'u_mouse': new THREE.Vector3(0, 0, 0)  // Custom mouse position
+});
+```
+
+### Extending the Plugin
+
+You can extend the BasicConstraintsPlugin for custom behavior:
+
+```typescript
+class CustomBasicPlugin extends BasicConstraintsPlugin {
+  onInit(system: ParticleSystem) {
+    // Call parent initialization
+    super.onInit(system);
+    
+    // Add custom constraints
+    const customForce = new Constraint('customGravity', /*glsl*/`
+      force += vec3(0.0, -0.5, 0.0) * mass; // Custom gravity
+    `);
+    
+    system.manager.constrain('force', customForce);
+  }
+  
+  onUpdate(system: ParticleSystem) {
+    // Call parent update
+    super.onUpdate(system);
+    
+    // Custom update logic
+    const time = performance.now() * 0.001;
+    system.manager.setUniforms('force', {
+      'u_customGravity_time': time
+    });
+  }
+}
+```
+
+## Property Groups
+
+The plugin creates efficient property groups:
+
+```typescript
+.group(['position', 'size'])        // Rendering properties
+.group(['velocity', 'lifetime'])     // Dynamic properties  
+.group(['force', 'mass'])           // Physics properties
+```
+
+## Global Uniforms
+
+The plugin sets up essential global uniforms:
+
+```typescript
+.setUniformsAll({
+  u_time: 0,                        // Current time
+  u_delta: 0,                       // Delta time
+  u_resolution: new THREE.Vector2(width, height),
+  u_texture_resolution: new THREE.Vector2(width, height),
+  u_mouse: system.intersectionPoint  // Mouse position
+})
+```
+
+## Integration with Particle Material
+
+The plugin automatically links FBO textures to the particle material:
+
+```typescript
+// Position texture
+system.particleMaterial.uniforms[positionFBO.textureName] = {
+  value: positionFBO.read.texture,
+};
+
+// Velocity/lifetime texture
+system.particleMaterial.uniforms[lifetimeFBO.textureName] = {
+  value: lifetimeFBO.read.texture,
+};
+
+// Color texture
+system.particleMaterial.uniforms[colorFBO.textureName] = {
+  value: colorFBO.read.texture,
+};
+```
+
+## Best Practices
+
+1. **Plugin Order**: Apply plugins before adding particles
+2. **Update Cycle**: Call `onUpdate()` in your render loop
+3. **Property Setup**: Let the plugin handle property setup for consistency
+4. **Customization**: Modify uniforms after initialization rather than during
+5. **Performance**: The plugin is optimized for common use cases
+
+## Advanced Usage
+
+### Selective Feature Usage
+
+If you only need certain features, create a custom plugin:
+
+```typescript
+class MinimalPhysicsPlugin implements ParticlePlugin {
+  name = "MinimalPhysics";
+  
+  onInit(system: ParticleSystem) {
+    // Only setup position and velocity
+    system.manager
+      .add('position', 3)
+      .add('velocity', 3, new Float32Array([0, 0, 0]))
+      .group(['position', 'velocity']);
+    
+    // Only position updates
+    const positionUpdate = new Constraint('positionUpdate', /*glsl*/`
+      position += velocity * u_delta;
+    `);
+    
+    system.manager.constrain('position', positionUpdate);
+  }
+  
+  onUpdate(system: ParticleSystem) {
+    // Minimal update logic
+  }
+}
+```
+
+### Multi-System Usage
+
+The plugin can be applied to multiple particle systems:
+
+```typescript
+const systems = [
+  new ParticleSystem({ canvas: canvas1 }),
+  new ParticleSystem({ canvas: canvas2 }),
+  new ParticleSystem({ canvas: canvas3 })
+];
+
+systems.forEach(system => {
+  const plugin = new BasicConstraintsPlugin();
+  plugin.onInit(system);
+});
+```
+
+## Performance Considerations
+
+- **GPU-Optimized**: All constraints run on the GPU
+- **Efficient Grouping**: Properties are grouped for optimal memory layout
+- **Minimal Overhead**: Plugin adds minimal computational overhead
+- **Scalable**: Performs well with large particle counts
+- **Memory Efficient**: Reuses textures and materials where possible
+
+## Troubleshooting
+
+### Plugin Not Working
+- Ensure `onInit()` is called before adding particles
+- Call `onUpdate()` in your render loop
+- Verify the particle system is properly initialized
+
+### Poor Performance
+- Check particle count - reduce if necessary
+- Monitor FBO texture sizes
+- Consider disabling unused features
+
+### Mouse Interaction Issues
+- Verify canvas mouse coordinates are correct
+- Check camera setup for raycasting
+- Ensure the raycast plane is properly positioned
+
+### Particles Not Moving
+- Check that forces are being applied
+- Verify velocity constraints are active
+- Ensure time uniforms are being updated

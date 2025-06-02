@@ -1,0 +1,57 @@
+---
+title: Frame
+description: Container class for particle data that can be added to or used to morph particle systems
+---
+
+## Constructor
+
+```typescript
+new Frame(options?: { particles: Particle[] })
+```
+
+### Parameters
+
+| Parameter | Type         | Description                              | Default |
+| --------- | ------------ | ---------------------------------------- | ------- |
+| particles | `Particle[]` | Array of particles to include in frame  | `[]`    |
+
+## Properties
+
+| Property  | Type                                   | Description                              |
+|-----------|----------------------------------------|------------------------------------------|
+| uuid      | `string`                               | Unique identifier for the frame         |
+| particles | `Particle[]`                           | Array of particles contained in frame   |
+| count     | `number`                               | Number of particles in the frame        |
+| data      | `Record<string, Float32Array>`         | Processed particle data for GPU         |
+
+## Methods
+
+### `build(propertyManager: PropertyManager): void`
+
+Processes the frame's particles and prepares data for the PropertyManager.
+
+### `dispose(): void`
+
+Cleans up the frame's data and resources.
+
+## Example Usage
+
+```typescript
+import { Frame, Particle } from 'particlize';
+
+// Create particles
+const particles = [
+  new Particle({ position: [0, 0, 0] }),
+  new Particle({ position: [1, 1, 1] }),
+  new Particle({ position: [2, 2, 2] })
+];
+
+// Create frame with particles
+const frame = new Frame({ particles });
+
+// Build frame data with property manager
+frame.build(propertyManager);
+
+// Use frame data
+console.log(frame.data);
+```

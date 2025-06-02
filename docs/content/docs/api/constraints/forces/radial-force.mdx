@@ -1,0 +1,67 @@
+---
+title: RadialForce
+description: Constraint that applies radial force from or toward a center point
+---
+
+## Constructor
+
+```typescript
+new RadialForce(params: RadialForceParams)
+```
+
+### Parameters
+
+| Parameter | Type                | Description                                | Default |
+| --------- | ------------------- | ------------------------------------------ | ------- |
+| params    | `RadialForceParams` | Configuration parameters for the force    | -       |
+
+## Properties
+
+| Property | Type     | Description                          |
+|----------|----------|--------------------------------------|
+| name     | `string` | Unique identifier for the constraint |
+| active   | `boolean` | Whether the constraint is active    |
+| glsl     | `string` | GLSL shader code for the force      |
+| center   | `[number, number, number]` | Center point of the radial force |
+| strength | `number` | Strength of the force               |
+
+## Methods
+
+### `build(): void`
+
+Builds the GLSL shader code for the radial force.
+
+### `setCenter(center: [number, number, number]): void`
+
+Updates the center position of the radial force.
+
+### `setStrength(strength: number): void`
+
+Updates the strength of the radial force.
+
+## Example Usage
+
+```typescript
+import { RadialForce, PropertyManager } from 'particlize';
+
+// Create a radial force that attracts particles to center
+const attractiveForce = new RadialForce({
+  center: { value: [0, 0, 0], hardcode: true },
+  strength: { value: -0.1, hardcode: false } // Negative for attraction
+});
+
+// Create a radial force that repels particles from center
+const repulsiveForce = new RadialForce({
+  center: { value: [0, 0, 0], hardcode: true },
+  strength: { value: 0.2, hardcode: false } // Positive for repulsion
+});
+
+// Add to property manager
+const propertyManager = new PropertyManager({ /* ... */ });
+propertyManager.addProperty('velocity', { size: 3 });
+propertyManager.addConstraint('velocity', attractiveForce);
+
+// Update force strength dynamically
+repulsiveForce.setStrength(0.5);
+repulsiveForce.setCenter([1, 0, 0]);
+```

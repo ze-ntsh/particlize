@@ -1,0 +1,80 @@
+---
+title: Constraint
+description: Base class for creating particle constraints and forces
+---
+
+## Constructor
+
+```typescript
+new Constraint(name: string, glsl?: string, uniforms?: Record<string, any>)
+```
+
+### Parameters
+
+| Parameter | Type                    | Description                              | Default |
+| --------- | ----------------------- | ---------------------------------------- | ------- |
+| name      | `string`                | Unique name for the constraint           | -       |
+| glsl      | `string`                | GLSL shader code for the constraint      | `""`    |
+| uniforms  | `Record<string, any>`   | Uniform values for the shader            | `{}`    |
+
+## Properties
+
+| Property | Type                                                                    | Description                                        |
+|----------|-------------------------------------------------------------------------|----------------------------------------------------|
+| name     | `string`                                                                | Unique identifier for the constraint              |
+| active   | `boolean`                                                               | Whether the constraint is active                   |
+| glsl     | `string`                                                                | GLSL shader code that implements the constraint    |
+| uniforms | `Record<string, any>`                                                   | Uniform values passed to the shader               |
+| params   | `Record<string, { value: number \| number[], hardcode?: boolean }> \| null` | Parameter definitions for the constraint           |
+
+## Methods
+
+### `build(): void`
+
+Processes the constraint's parameters and builds the final GLSL code.
+
+## Example Usage
+
+```typescript
+import { Constraint, PropertyManager } from 'particlize';
+
+// Create a basic gravity constraint
+const gravity = new Constraint(
+  'gravity',
+  `
+    vec3 gravity = vec3(0.0, -0.1, 0.0);
+    velocity.xyz += gravity * u_deltaTime;
+  `,
+  {
+    u_deltaTime: 0.016
+  }
+);
+
+// Create property manager and add constraint
+const propertyManager = new PropertyManager({ /* ... */ });
+propertyManager.addProperty('velocity', { size: 3 });
+propertyManager.addConstraint('velocity', gravity);
+
+// Create a custom parameterized constraint
+class SinewaveConstraint extends Constraint {
+  constructor(amplitude: number, frequency: number) {
+    super('sinewave');
+    
+    this.params = {
+      amplitude: { value: amplitude, hardcode: true },
+      frequency: { value: frequency, hardcode: false }
+    };
+    
+    this.glsl = `
+      float amplitude@ = #AMPLITUDE;
+      float frequency@ = #FREQUENCY;
+      
+      position.y += sin(position.x * frequency@ + u_time) * amplitude@;
+    `;
+  }
+}
+
+// Use custom constraint
+const sinewave = new SinewaveConstraint(0.5, 2.0);
+propertyManager.addConstraint('position', sinewave);
+```

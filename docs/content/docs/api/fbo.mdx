@@ -1,0 +1,144 @@
+---
+title: FBO
+description: Frame Buffer Object class for GPU-based particle computations
+---
+
+## Constructor
+
+```typescript
+new FBO(params: FBOParams)
+```
+
+### Parameters
+
+| Parameter  | Type                        | Description                                | Default |
+| ---------- | --------------------------- | ------------------------------------------ | ------- |
+| name       | `string`                    | Unique name for the FBO                   | -       |
+| width      | `number`                    | Width of the render target                 | -       |
+| height     | `number`                    | Height of the render target                | -       |
+| renderer   | `THREE.WebGLRenderer`       | WebGL renderer instance                    | -       |
+| camera     | `THREE.OrthographicCamera`  | Orthographic camera for rendering          | -       |
+| properties | `Property[]`                | Array of properties managed by this FBO   | `[]`    |
+| channels   | `number`                    | Number of color channels (1-4)            | `4`     |
+
+## Properties
+
+| Property      | Type                        | Description                                              |
+|---------------|-----------------------------|---------------------------------------------------------|
+| uuid          | `string`                    | Unique identifier for the FBO                           |
+| name          | `string`                    | Name of the FBO                                         |
+| textureName   | `string`                    | Texture uniform name (automatically generated)          |
+| width         | `number`                    | Render target width                                     |
+| height        | `number`                    | Render target height                                    |
+| channels      | `number`                    | Number of color channels (1-4)                         |
+| renderer      | `THREE.WebGLRenderer`       | WebGL renderer                                          |
+| camera        | `THREE.OrthographicCamera`  | Camera for rendering                                    |
+| scene         | `THREE.Scene`               | Scene for FBO rendering                                 |
+| material      | `THREE.ShaderMaterial`      | Shader material for computations                        |
+| read          | `THREE.WebGLRenderTarget`   | Read render target                                      |
+| write         | `THREE.WebGLRenderTarget`   | Write render target                                     |
+| properties    | `Property[]`                | Properties managed by this FBO                          |
+| dependencies  | `Set<FBO>`                  | FBOs that this FBO depends on                           |
+| constraints   | `Map<string, Constraint>`   | Constraints applied to this FBO                         |
+| needsUpdate   | `boolean`                   | Whether the FBO needs updating                          |
+
+## Methods
+
+### `addConstraint(constraint: Constraint): void`
+
+Adds a constraint to the FBO.
+
+### `removeConstraint(name: string): boolean`
+
+Removes a constraint by name.
+
+### `hasConstraint(name: string): boolean`
+
+Checks if a constraint exists.
+
+### `addProperty(property: Property): void`
+
+Adds a property to be managed by this FBO.
+
+### `removeProperty(property: Property): void`
+
+Removes a property from the FBO.
+
+### `inject(data: Float32Array, offset?: number): void`
+
+Injects data into the FBO at the specified offset.
+
+### `update(): void`
+
+Updates the FBO by rendering with current constraints and uniforms.
+
+### `swap(): void`
+
+Swaps the read and write render targets.
+
+### `setUniforms(uniforms: Record<string, any>): void`
+
+Sets uniforms on the FBO's shader material.
+
+### `rebuildShader(): void`
+
+Rebuilds the FBO's shader with current constraints.
+
+### `addDependency(fbo: FBO): void`
+
+Adds a dependency on another FBO.
+
+### `removeDependency(fbo: FBO): void`
+
+Removes a dependency.
+
+### `dispose(): void`
+
+Disposes of all FBO resources.
+
+## Example Usage
+
+```typescript
+import { FBO, Property, RadialForce } from 'particlize';
+import * as THREE from 'three';
+
+// Setup
+const renderer = new THREE.WebGLRenderer();
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+
+// Create position FBO
+const positionFBO = new FBO({
+  name: 'position',
+  width: 512,
+  height: 512,
+  renderer,
+  camera,
+  channels: 4
+});
+
+// Add constraints
+const radialForce = new RadialForce({
+  center: [0, 0, 0],
+  strength: 0.1
+});
+positionFBO.addConstraint(radialForce);
+
+// Inject initial data
+const particleCount = 1000;
+const initialPositions = new Float32Array(particleCount * 4);
+// ... fill initial positions ...
+
+positionFBO.inject(initialPositions);
+
+// Animation loop
+function animate() {
+  positionFBO.setUniforms({
+    u_time: performance.now() / 1000,
+    u_deltaTime: 0.016
+  });
+  
+  positionFBO.update();
+  requestAnimationFrame(animate);
+}
+animate();
+```

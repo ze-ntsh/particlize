@@ -1,0 +1,362 @@
+---
+title: Utils
+description: Utility functions for working with text, GLSL, and data manipulation
+---
+
+# Utils
+
+The Particlize library provides several utility functions for common tasks such as converting text to meshes, GLSL type/value conversion, and deep object merging.
+
+## Text to Mesh
+
+### `textToMesh(props): Promise<THREE.Mesh>`
+
+Converts text into a 3D mesh using a specified font. Useful for creating text-based particle sources.
+
+```typescript
+import { textToMesh } from 'particlize';
+
+const textMesh = await textToMesh({
+  text: 'PARTICLES',
+  fontURL: 'https://components.ai/api/v1/typefaces/montserrat/normal/500',
+  color: [1.0, 0.5, 0.0],
+  size: 2,
+  depth: 0.5
+});
+```
+
+#### Parameters
+
+<table>
+  <thead>
+    <tr>
+      <th>Parameter</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`text`</td>
+      <td>`string`</td>
+      <td>`"Hello World"`</td>
+      <td>The text to convert to mesh</td>
+    </tr>
+    <tr>
+      <td>`fontURL`</td>
+      <td>`string`</td>
+      <td>Montserrat font URL</td>
+      <td>URL to load the font from</td>
+    </tr>
+    <tr>
+      <td>`color`</td>
+      <td>`[number, number, number]`</td>
+      <td>`[0.0, 0.0, 0.0]`</td>
+      <td>RGB color values (0-1)</td>
+    </tr>
+    <tr>
+      <td>`size`</td>
+      <td>`number`</td>
+      <td>`1`</td>
+      <td>Size of the text</td>
+    </tr>
+    <tr>
+      <td>`depth`</td>
+      <td>`number`</td>
+      <td>`0.2`</td>
+      <td>Extrusion depth</td>
+    </tr>
+    <tr>
+      <td>`curveSegments`</td>
+      <td>`number`</td>
+      <td>`12`</td>
+      <td>Number of curve segments</td>
+    </tr>
+    <tr>
+      <td>`bevelEnabled`</td>
+      <td>`boolean`</td>
+      <td>`false`</td>
+      <td>Enable bevel effect</td>
+    </tr>
+    <tr>
+      <td>`bevelThickness`</td>
+      <td>`number`</td>
+      <td>`0.1`</td>
+      <td>Thickness of bevel</td>
+    </tr>
+    <tr>
+      <td>`bevelSize`</td>
+      <td>`number`</td>
+      <td>`0.1`</td>
+      <td>Size of bevel</td>
+    </tr>
+    <tr>
+      <td>`bevelOffset`</td>
+      <td>`number`</td>
+      <td>`0`</td>
+      <td>Offset of bevel</td>
+    </tr>
+    <tr>
+      <td>`bevelSegments`</td>
+      <td>`number`</td>
+      <td>`5`</td>
+      <td>Number of bevel segments</td>
+    </tr>
+  </tbody>
+</table>
+
+#### Example Usage
+
+```typescript
+// Basic text mesh
+const basicText = await textToMesh({
+  text: 'PARTICLE',
+  size: 1.5,
+  color: [1, 0, 0]
+});
+
+// Text with bevel
+const beveledText = await textToMesh({
+  text: 'SYSTEM',
+  size: 2,
+  depth: 0.3,
+  bevelEnabled: true,
+  bevelThickness: 0.1,
+  bevelSize: 0.05,
+  color: [0, 1, 0]
+});
+
+// Use with MeshSurfaceSampler
+import { MeshSurfaceSampler } from 'particlize';
+const sampler = new MeshSurfaceSampler(textMesh).build();
+```
+
+## GLSL Utilities
+
+### `getGLSLType(value): string | null`
+
+Returns the appropriate GLSL type for a given JavaScript/Three.js value.
+
+```typescript
+import { getGLSLType } from 'particlize';
+import * as THREE from 'three';
+
+console.log(getGLSLType(5.0));                          // "float"
+console.log(getGLSLType(new THREE.Vector2(1, 2)));      // "vec2"
+console.log(getGLSLType(new THREE.Vector3(1, 2, 3)));   // "vec3"
+console.log(getGLSLType(new THREE.Vector4(1, 2, 3, 4))); // "vec4"
+console.log(getGLSLType(texture));                      // "sampler2D"
+console.log(getGLSLType("string"));                     // null
+```
+
+#### Supported Types
+
+- **`number`** → `"float"`
+- **`THREE.Vector2`** → `"vec2"`
+- **`THREE.Vector3`** → `"vec3"`
+- **`THREE.Vector4`** → `"vec4"`
+- **`THREE.Texture`** → `"sampler2D"`
+- **Other types** → `null`
+
+### `getGLSLValue(value): string`
+
+Converts JavaScript/Three.js values to their GLSL string representation.
+
+```typescript
+import { getGLSLValue } from 'particlize';
+import * as THREE from 'three';
+
+console.log(getGLSLValue(3.14159));                     // "3.141590"
+console.log(getGLSLValue(new THREE.Vector2(1, 2)));     // "vec2(1.000000, 2.000000)"
+console.log(getGLSLValue(new THREE.Vector3(1, 2, 3)));  // "vec3(1.000000, 2.000000, 3.000000)"
+console.log(getGLSLValue([1, 0, 0, 1]));                // "vec4(1.000000, 0.000000, 0.000000, 1.000000)"
+```
+
+#### Example with Constraints
+
+```typescript
+import { Constraint, getGLSLValue } from 'particlize';
+
+class CustomConstraint extends Constraint {
+  constructor(center: THREE.Vector3, radius: number) {
+    const glsl = `
+      vec3 center = ${getGLSLValue(center)};
+      float radius = ${getGLSLValue(radius)};
+      
+      vec3 direction = position.xyz - center;
+      float distance = length(direction);
+      
+      if (distance > radius) {
+        position.xyz = center + normalize(direction) * radius;
+      }
+    `;
+    
+    super('sphereConstraint', glsl);
+  }
+}
+```
+
+## Data Manipulation
+
+### `deepMerge(target, source, visited?): any`
+
+Performs a deep merge of two objects, handling circular references and nested structures.
+
+```typescript
+import { deepMerge } from 'particlize';
+
+const target = {
+  settings: {
+    quality: 'high',
+    effects: {
+      bloom: true
+    }
+  },
+  count: 1000
+};
+
+const source = {
+  settings: {
+    effects: {
+      motionBlur: true,
+      bloom: false
+    },
+    debug: true
+  },
+  count: 2000
+};
+
+const merged = deepMerge(target, source);
+console.log(merged);
+// {
+//   settings: {
+//     quality: 'high',
+//     effects: {
+//       bloom: false,      // Overridden
+//       motionBlur: true   // Added
+//     },
+//     debug: true          // Added
+//   },
+//   count: 2000            // Overridden
+// }
+```
+
+#### Parameters
+
+- **`target`**: The target object to merge into
+- **`source`**: The source object to merge from
+- **`visited`**: (Optional) Map for tracking visited objects to handle circular references
+
+#### Features
+
+- **Deep Merging**: Recursively merges nested objects
+- **Circular Reference Handling**: Prevents infinite loops
+- **Type Safety**: Only merges objects, preserves other types
+- **In-Place Modification**: Modifies the target object
+
+## Usage Examples
+
+### Creating Text-Based Particles
+
+```typescript
+import { textToMesh, MeshSurfaceSampler, SamplerFrame } from 'particlize';
+
+// Create text mesh
+const textMesh = await textToMesh({
+  text: 'PARTICLIZE',
+  size: 3,
+  depth: 0.5,
+  color: [1, 0.5, 0]
+});
+
+// Sample particles from text
+const sampler = new MeshSurfaceSampler(textMesh).build();
+const frame = new SamplerFrame({
+  sampler,
+  count: 5000,
+  properties: {
+    position: { size: 3 },
+    velocity: { size: 3, defaultValue: new Float32Array([0, 0, 0]) }
+  }
+});
+
+// Add to particle system
+particleSystem.addParticles(frame);
+```
+
+### Dynamic Shader Generation
+
+```typescript
+import { getGLSLType, getGLSLValue } from 'particlize';
+
+function generateShader(uniforms: Record<string, any>) {
+  let uniformDeclarations = '';
+  
+  for (const [name, value] of Object.entries(uniforms)) {
+    const glslType = getGLSLType(value);
+    if (glslType) {
+      uniformDeclarations += `uniform ${glslType} ${name};\n`;
+    }
+  }
+  
+  const fragmentShader = `
+    ${uniformDeclarations}
+    
+    void main() {
+      // Use uniforms in shader
+      gl_FragColor = vec4(1.0);
+    }
+  `;
+  
+  return fragmentShader;
+}
+```
+
+### Configuration Merging
+
+```typescript
+import { deepMerge } from 'particlize';
+
+const defaultConfig = {
+  particle: {
+    count: 1000,
+    size: 1.0,
+    color: [1, 1, 1, 1]
+  },
+  physics: {
+    gravity: [0, -9.81, 0],
+    damping: 0.99
+  }
+};
+
+const userConfig = {
+  particle: {
+    count: 5000,
+    color: [1, 0, 0, 1]
+  }
+};
+
+const finalConfig = deepMerge({ ...defaultConfig }, userConfig);
+// Results in merged configuration with user overrides
+```
+
+## Type Definitions
+
+```typescript
+interface TextMeshProps extends Partial<TextGeometryParameters> {
+  text?: string;
+  fontURL?: string;
+  color?: [number, number, number];
+}
+
+type GLSLValue = number | THREE.Vector2 | THREE.Vector3 | THREE.Vector4 | number[];
+type DeepMergeTarget = Record<string, any>;
+```
+
+## Performance Notes
+
+- **`textToMesh`**: Font loading is async and cached by Three.js
+- **`getGLSLValue`**: Numbers are formatted to 6 decimal places
+- **`deepMerge`**: Handles circular references but can be expensive for deep structures
+- **GLSL Functions**: Primarily used at shader compile time, not in render loops
