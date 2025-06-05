@@ -2,7 +2,7 @@
 
 A powerful, flexible, and high-performance particle system library for Three.js applications. Create stunning visual effects with GPU-accelerated particle simulations, extensive constraint systems, and intuitive APIs.
 
-> The library is in active early development, and the API is subject to change. Please check back often for updates and new features! A comprehensive documentation is coming soon.
+> The library is in active early development, and the API is subject to change. Please check back often for updates and new features! A comprehensive documentation is coming soon. Plan to have a stable release by end of July 2025.
 
 ## ✨ Features
 
@@ -16,7 +16,11 @@ A powerful, flexible, and high-performance particle system library for Three.js 
 
 ### Installation
 
-The latest version of Particlize.js is not yet available on npm as it is still under active development. To use it, you can clone the repository and use/build it locally.
+You can install Particlize.js via npm:
+
+```bash
+npm install particlize-js
+```
 
 ### Basic Usage
 
