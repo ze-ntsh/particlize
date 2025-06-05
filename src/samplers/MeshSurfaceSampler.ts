@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Sampler } from "./Sampler";
+import { SamplerInterface } from "@/samplers/SamplerInterface";
 
 const _face = new THREE.Triangle();
 const _color = new THREE.Vector3();
@@ -42,7 +42,7 @@ const _uva = new THREE.Vector2(),
  *
  * @three_import import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
  */
-export class MeshSurfaceSampler extends Sampler {
+export class MeshSurfaceSampler implements SamplerInterface {
   geometry;
   randomFunction;
   indexAttribute;
@@ -59,7 +59,6 @@ export class MeshSurfaceSampler extends Sampler {
    * @param {Mesh} mesh - Surface mesh from which to sample.
    */
   constructor(mesh: THREE.Mesh) {
-    super();
     this.geometry = mesh.geometry;
     this.randomFunction = Math.random;
 

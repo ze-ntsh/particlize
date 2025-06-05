@@ -1,18 +1,15 @@
 import { deepMerge } from "@/utils";
-import { Constraint } from "../Constraint";
+import { Constraint } from "@/constraints";
 
 // Types
 export type OriginRestoringForceParams = {
-  strength?: {
-    value: number;
-    hardcode?: boolean;
-  };
+  strength?: number;
 };
 
 export class OriginRestoringForce extends Constraint {
   // Default parameters
   static readonly defaultParams: OriginRestoringForceParams = {
-    strength: { value: 10, hardcode: false },
+    strength: 10,
   };
 
   constructor(name: string, params: OriginRestoringForceParams = {}) {
@@ -28,7 +25,7 @@ export class OriginRestoringForce extends Constraint {
       force = acceleration@ * mass;
       `
     );
-    this.params = deepMerge(OriginRestoringForce.defaultParams, params) as OriginRestoringForceParams;
+    this.params = { ...OriginRestoringForce.defaultParams, ...params };
     this.build();
   }
 }

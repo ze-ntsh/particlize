@@ -4,26 +4,6 @@
   "type": "module",
   "description": "A library for creating particle systems in Three.js",
   "main": "./src/index.ts",
-  "exports": {
-    ".": {
-      "import": "./src/index.ts"
-    },
-    "./samplers": {
-      "import": "./src/samplers/index.ts"
-    },
-    "./utils": {
-      "import": "./src/utils/index.ts"
-    },
-    "./frames": {
-      "import": "./src/utils/index.ts"
-    },
-    "./constraints": {
-      "import": "./src/constraints/index.ts"
-    },
-    "./constraints/forces": {
-      "import": "./src/constraints/forces/index.ts"
-    }
-  },
   "scripts": {
     "clean": "rimraf build",
     "dev": "vite --host",

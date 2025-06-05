@@ -1,5 +1,4 @@
 {
   "title": "API Reference",
-  "pages": ["particle-system", "property-manager", "property", "fbo", "particle", "frames", "samplers", "constraints", "plugins"],
-  "defaultOpen": true
+  "pages": ["particle-system", "property-manager", "property", "fbo", "particle", "frames", "samplers", "constraints", "plugins"]
 }

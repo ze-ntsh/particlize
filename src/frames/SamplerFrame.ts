@@ -1,15 +1,15 @@
-import { Sampler } from "@/samplers/Sampler";
+import { checkIfSampler, SamplerInterface } from "@/samplers/SamplerInterface";
 import { Frame } from "./Frame";
 import * as THREE from "three";
 import { Particle } from "@/Particle";
 import { PropertyManager } from "@/PropertyManager";
 
 export class SamplerFrame extends Frame {
-  sampler: Sampler;
-  constructor({ sampler, count = 0 }: { sampler: Sampler; count?: number }) {
+  sampler: SamplerInterface;
+  constructor({ sampler, count = 0 }: { sampler: SamplerInterface; count?: number }) {
     super();
-    if (!(sampler instanceof Sampler)) {
-      throw new Error("Invalid sampler provided. Must be an instance of Sampler.");
+    if (!checkIfSampler(sampler)) {
+      throw new Error("Invalid sampler provided to SamplerFrame");
     }
 
     this.sampler = sampler;

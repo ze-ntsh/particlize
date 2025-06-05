@@ -1,6 +1,5 @@
 "use strict";
 import * as THREE from "three";
-import Stats from "three/examples/jsm/libs/stats.module";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 // GLSL
@@ -10,15 +9,18 @@ import particleFragment from "@/shaders/particle.frag?raw";
 import { PropertyManager } from "@/PropertyManager";
 import { RenderTargetVisualizer } from "@/utils/RenderTargetVisualizer";
 import { Frame } from "@/frames/Frame";
-import { ParticlePlugin } from "./plugins/Plugin";
+import { PluginInterface } from "@/plugins/PluginInterface";
 
 // Types
 export interface ParticleSystemParams {
   canvas: HTMLCanvasElement;
+  renderer?: THREE.WebGLRenderer;
+  camera?: THREE.PerspectiveCamera;
+  scene?: THREE.Scene;
   backgroundColor?: [number, number, number, number];
   fboHeight?: number;
   fboWidth?: number;
-  plugins?: ParticlePlugin[];
+  plugins?: PluginInterface[];
 }
 
 /**
@@ -39,7 +41,6 @@ export class ParticleSystem extends EventTarget {
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
   clock: THREE.Clock = new THREE.Clock();
-  stats: Stats;
   controls: OrbitControls;
 
   // Data
@@ -50,7 +51,7 @@ export class ParticleSystem extends EventTarget {
   renderTargetVisualizer: RenderTargetVisualizer | null = null;
 
   // Plugins
-  plugins: ParticlePlugin[] = [];
+  plugins: PluginInterface[] = [];
 
   // Particles
   particleGeometry: THREE.BufferGeometry;
@@ -63,7 +64,16 @@ export class ParticleSystem extends EventTarget {
   intersectionObserver: IntersectionObserver;
   inView: boolean = true;
 
-  constructor({ canvas, backgroundColor = [0, 0, 0, 1], fboHeight = 512, fboWidth = 512, plugins = [] }: ParticleSystemParams) {
+  constructor({
+    canvas,
+    renderer,
+    camera,
+    scene,
+    backgroundColor = [0, 0, 0, 1],
+    fboHeight = 512,
+    fboWidth = 512,
+    plugins = [],
+  }: ParticleSystemParams) {
     super();
 
     if (!canvas || !(canvas instanceof HTMLCanvasElement)) {
@@ -138,10 +148,6 @@ export class ParticleSystem extends EventTarget {
     this.particles = new THREE.Points(this.particleGeometry, this.particleMaterial);
     this.scene.add(this.particles);
 
-    // Stats
-    this.stats = new Stats();
-    document.body.appendChild(this.stats.dom);
-
     window.addEventListener("resize", () => {
       this.resize();
     });
@@ -173,10 +179,10 @@ export class ParticleSystem extends EventTarget {
     }
 
     // Link the property texture to the shader material
-    if (this.particleMaterial.uniforms[property.fbo.name]) {
-      this.particleMaterial.uniforms[property.fbo.name].value = property.fbo.read.texture;
+    if (this.particleMaterial.uniforms[property.fbo.textureName]) {
+      this.particleMaterial.uniforms[property.fbo.textureName].value = property.fbo.read.texture;
     } else {
-      this.particleMaterial.uniforms[property.fbo.name] = { value: property.fbo.read.texture };
+      this.particleMaterial.uniforms[property.fbo.textureName] = { value: property.fbo.read.texture };
     }
   }
 
@@ -230,7 +236,6 @@ export class ParticleSystem extends EventTarget {
 
     // Render the scene
     this.renderer.render(this.scene, this.camera);
-    this.stats.update();
     this.controls.update();
   }
 
@@ -243,7 +248,6 @@ export class ParticleSystem extends EventTarget {
     this.manager.dispose();
 
     // Remove event listeners
-    window.removeEventListener("mousemove", () => {});
     window.removeEventListener("resize", () => {});
 
     // Dispose of plugins

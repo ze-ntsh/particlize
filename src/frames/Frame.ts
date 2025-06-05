@@ -7,7 +7,7 @@ export class Frame extends EventTarget {
   particles: Particle[] = [];
   data: Record<string, Float32Array> = {};
   count: number = 0;
-  worker: Worker | null = null;
+  map: { [key: string]: Float32Array } = {};
 
   constructor(
     { particles = [] }: { particles: Particle[] } = {
@@ -24,35 +24,6 @@ export class Frame extends EventTarget {
   }
 
   build(propertyManager: PropertyManager) {
-    // const mininalPropertyObject: Record<string, { fbo: {name: string}; channelOffset: number; defaultValue: Float32Array }> = {};
-
-    // const properties = propertyManager.properties;
-    // for (const propertyName in properties) {
-    //   const property = properties[propertyName];
-    //   mininalPropertyObject[propertyName] = {
-    //     fbo: {
-    //       name: property.fbo.name,
-    //     },
-    //     channelOffset: property.channelOffset,
-    //     defaultValue: property.defaultValue,
-    //   };
-    // }
-
-    // this.worker = new Worker(new URL("@/utils/buildWorker.ts", import.meta.url));
-    // this.worker.postMessage({
-    //   particles: this.particles,
-    //   properties: mininalPropertyObject,
-    // });
-    // this.worker.onmessage = (e) => {
-    //   console.log("Worker finished processing particles.", e.data);
-
-    //   this.data = e.data as Record<string, Float32Array>;
-    //   this.worker?.terminate();
-    //   this.worker = null;
-
-    //   this.dispatchEvent(new Event("buildComplete"));
-    // };
-
     const properties = propertyManager.properties;
 
     for (const property of properties.values()) {

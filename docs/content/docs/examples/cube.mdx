@@ -1,0 +1,82 @@
+---
+title: Cube
+description: A simple cube made with particles - comparing mathematical and mesh-based approaches
+---
+
+There are many ways to create a cube (or any shape) with particles. We will go over two different approaches here, each with their own advantages and use cases.
+
+## Using Math
+
+The mathematical approach generates particles by creating random positions within a cube's bounds. This method gives you complete control over particle distribution and is computationally efficient for simple shapes.
+
+```typescript
+import { ParticleSystem, Particle } from "particlize-js";
+import { Frame } from "particlize-js/frames";
+import { BasicConstraintsPlugin } from "particlize-js/plugins/templates";
+
+const system = new ParticleSystem({
+  canvas: canvasElement,
+  fboHeight: 128,
+  fboWidth: 128,
+  plugins: [new BasicConstraintsPlugin()],
+});
+
+// Generate particles mathematically
+const particles: Particle[] = [];
+for (let i = 0; i < 10000; i++) {
+  // Random positions between -0.5 and 0.5 (1x1x1 cube)
+  const x = Math.random() - 0.5;
+  const y = Math.random() - 0.5; 
+  const z = Math.random() - 0.5;
+
+  particles.push(
+    new Particle({
+      position: new Float32Array([x, y, z]),
+      origin: new Float32Array([x, y, z]),
+      color: new Float32Array([
+        Math.random(), // Red
+        Math.random(), // Green  
+        Math.random(), // Blue
+        1.0            // Alpha
+      ]),
+    })
+  );
+}
+
+const frame = new Frame({ particles });
+system.addParticles(frame);
+```
+
+<CubeExample type={"math"}/>
+
+## Using a Mesh
+
+The mesh-based approach uses THREE.js geometry and the `MeshSurfaceSampler` to place particles on the surface of a 3D mesh. This creates more realistic geometric shapes and allows for complex geometry.
+
+```typescript
+import { ParticleSystem } from "particlize-js";
+import { SamplerFrame } from "particlize-js/frames";
+import { MeshSurfaceSampler } from "particlize-js/samplers";
+import * as THREE from "three";
+
+const system = new ParticleSystem({
+  canvas: canvasElement,
+  fboHeight: 128,
+  fboWidth: 128,
+  plugins: [new BasicConstraintsPlugin()],
+});
+
+// Create a THREE.js cube geometry
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+const mesh = new THREE.Mesh(geometry);
+
+// Use mesh surface sampler to place particles on cube faces
+const frame = new SamplerFrame({
+  sampler: new MeshSurfaceSampler(mesh),
+  count: 10000,
+});
+
+system.addParticles(frame);
+```
+
+<CubeExample type={"mesh"}/>

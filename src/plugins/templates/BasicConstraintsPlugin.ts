@@ -1,31 +1,19 @@
 import { ParticleSystem } from "@/ParticleSystem";
-import { ParticlePlugin } from "../Plugin";
+import { PluginInterface } from "@/plugins/PluginInterface";
 import { Constraint } from "@/constraints";
 import { OriginRestoringForce } from "@/constraints/forces";
 import * as THREE from "three";
 import { FBO } from "@/FBO";
 import { Frame } from "@/frames";
 
-export class BasicConstraintsPlugin implements ParticlePlugin {
+export class BasicConstraintsPlugin implements PluginInterface {
   name = "BasicConstraintsPlugin";
   description?: string =
     "A plugin that adds basic constraints and forces to particles, including lifetime management, velocity updates, and mouse interaction.";
 
   onInit(system: ParticleSystem) {
-    // Setup raycaster for mouse interaction
-    system.raycaster = new THREE.Raycaster();
-    system.raycastPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    system.intersectionPoint = new THREE.Vector3(0, 0, 0);
-    system.mouse = new THREE.Vector2(0, 0);
-
-    // Event listeners
-    window.addEventListener("mousemove", (event) => {
-      system.mouse.x = (event.clientX / system.canvas.width) * 2 - 1;
-      system.mouse.y = -(event.clientY / system.canvas.height) * 2 + 1;
-    });
-
-    // Lifetime management
-    const lifetimeConstraint = new Constraint(
+    // Lifetime update
+    const lifetimeUpdate = new Constraint(
       "lifetimeUpdateConstraint",
       /*glsl*/ `
       if (lifetime > 0.0) {
@@ -34,8 +22,19 @@ export class BasicConstraintsPlugin implements ParticlePlugin {
     `
     );
 
+    // Lifetime discard
+    const lifetimeDiscard = new Constraint(
+      "lifetimeDiscardConstraint",
+      /*glsl*/ `
+      // Discard particles with lifetime <= 0 but not -1 (-1 means infinite lifetime)
+      if (lifetime > -1.0 && lifetime <= 0.0) {
+        discard;
+      }
+    `
+    );
+
     // Fade out particles based on lifetime
-    const colorConstraint = new Constraint(
+    const colorFadeOnLifetime = new Constraint(
       "colorLifetimeConstraint",
       /*glsl*/ `
       // Fade out when lifetime is between 0 and 1
@@ -46,41 +45,37 @@ export class BasicConstraintsPlugin implements ParticlePlugin {
     `
     );
 
-    // Velocity update based on force and mouse interaction
-    const velocityConstraint = new Constraint(
+    // Velocity update based on force and mass
+    const velocityUpdate = new Constraint(
       "velocityUpdateConstraint",
       /*glsl*/ `
       vec3 acceleration = force / mass;
       // Apply acceleration to velocity
       velocity += acceleration * u_delta;
 
-      // Mouse repulsion (radial, only within radius)
-      vec2 toParticle = position.xy - u_mouse.xy;
-      float dist = length(toParticle);
+      // // Mouse repulsion (radial, only within radius)
+      // vec2 toParticle = position.xy - u_mouse.xy;
+      // float dist = length(toParticle);
 
-      if(dist < 0.2 && dist > 0.0) {
-        vec2 dir = normalize(toParticle);
-        float strength = (1.0 - (dist / 0.2)) * 100.0;
-        velocity.xy += dir * strength * u_delta;
-      }
+      // if(dist < 0.2 && dist > 0.0) {
+      //   vec2 dir = normalize(toParticle);
+      //   float strength = (1.0 - (dist / 0.2)) * 100.0;
+      //   velocity.xy += dir * strength * u_delta;
+      // }
     `
     );
 
-    // Position updates based on velocity
-    const positionConstraint = new Constraint(
+    // Position update based on velocity
+    const positionUpdate = new Constraint(
       "positionUpdateConstraint",
       /*glsl*/ `
-      // Update position based on velocity
       position += velocity * u_delta;
     `
     );
 
     // Origin restoring force
     const originRestoringForce = new OriginRestoringForce("originRestoringForce", {
-      strength: {
-        value: 10,
-        hardcode: false, // Use uniform for strength
-      },
+      strength: 10,
     });
 
     system.manager
@@ -101,13 +96,13 @@ export class BasicConstraintsPlugin implements ParticlePlugin {
         u_delta: 0,
         u_resolution: new THREE.Vector2(system.canvas.width, system.canvas.height),
         u_texture_resolution: new THREE.Vector2(system.canvas.width, system.canvas.height),
-        u_mouse: system.intersectionPoint,
       })
-      .constrain("velocity", velocityConstraint)
-      .constrain("position", positionConstraint)
+      .constrainAll(lifetimeDiscard)
+      .constrain("velocity", velocityUpdate)
+      .constrain("position", positionUpdate)
       .constrain("force", originRestoringForce)
-      .constrain("lifetime", lifetimeConstraint)
-      .constrain("color", colorConstraint);
+      .constrain("lifetime", lifetimeUpdate)
+      .constrain("color", colorFadeOnLifetime);
 
     // Link the FBOs to the particle material
     const positionFBO = system.manager.properties.get("position")?.fbo as FBO;
@@ -117,19 +112,12 @@ export class BasicConstraintsPlugin implements ParticlePlugin {
     system.particleMaterial.uniforms[positionFBO.textureName] = {
       value: positionFBO.read.texture,
     };
-
     system.particleMaterial.uniforms[lifetimeFBO.textureName] = {
       value: lifetimeFBO.read.texture,
     };
-
     system.particleMaterial.uniforms[colorFBO.textureName] = {
       value: colorFBO.read.texture,
     };
-
-    // Add a mouse uniform to the velocity FBO
-    system.manager.setUniforms("velocity", {
-      u_mouse: null,
-    });
 
     // Add a morph function to the system
     system.morphTo = (target: Frame) => {
@@ -171,10 +159,6 @@ export class BasicConstraintsPlugin implements ParticlePlugin {
   }
 
   onUpdate(system: ParticleSystem): void {
-    // Update the raycaster based on mouse position
-    system.raycaster.setFromCamera(system.mouse, system.camera);
-    system.raycaster.ray.intersectPlane(system.raycastPlane, system.intersectionPoint);
-
     const positionFBO = system.manager.properties.get("position")?.fbo as FBO;
     const lifetimeFBO = system.manager.properties.get("velocity")?.fbo as FBO;
     const colorFBO = system.manager.properties.get("color")?.fbo as FBO;
@@ -182,9 +166,5 @@ export class BasicConstraintsPlugin implements ParticlePlugin {
     system.particleMaterial.uniforms[positionFBO.textureName].value = positionFBO.read.texture;
     system.particleMaterial.uniforms[lifetimeFBO.textureName].value = lifetimeFBO.read.texture;
     system.particleMaterial.uniforms[colorFBO.textureName].value = colorFBO.read.texture;
-
-    system.manager.setUniforms("velocity", {
-      u_mouse: system.intersectionPoint,
-    });
   }
 }

@@ -1,7 +1,6 @@
 import { Constraint } from "@/constraints/Constraint";
 import { FBO } from "@/FBO";
 import * as THREE from "three";
-import { Particle } from "@/Particle";
 import { Property } from "@/Property";
 
 // Types
@@ -148,7 +147,6 @@ export class PropertyManager {
       throw new Error(`Constraint "${constraintName}" does not exist for property "${name}".`);
     }
 
-    console.log(`Activating constraint "${constraintName}" for property "${name}".`, constraint.active);
     if (!constraint.active) {
       constraint.active = true;
       property.fbo.needsRebuild = true;

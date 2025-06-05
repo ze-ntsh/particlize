@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Property } from "@/Property";
 import { Constraint } from "@/constraints/Constraint";
-import { getGLSLType } from "./utils";
+import { getGLSLType } from "@/utils";
 
 // Types
 export type FBOParams = {
@@ -37,7 +37,11 @@ export class FBO {
   read: THREE.WebGLRenderTarget;
   write: THREE.WebGLRenderTarget;
 
+  // TODO: Store injected data in a buffer then batch inject it to the FBO or
+  //      use a web worker to handle the injection in the background or
+  //      use a framebuffer object to handle the injection (patch the FBO with a texture ?)
   injectBuffer: Map<string, Float32Array> = new Map<string, Float32Array>();
+
   needsUpdate: boolean = false;
   needsRebuild: boolean = false;
 
@@ -139,6 +143,8 @@ export class FBO {
       constraints += constraint.glsl + "\n";
     }
 
+    console.log("Building FBO Material:", this.name, constraints);
+
     for (const uniformName in this.material.uniforms) {
       const uniformValue = this.material.uniforms[uniformName].value;
       let type = getGLSLType(uniformValue);
@@ -178,6 +184,8 @@ export class FBO {
     this.material.vertexShader = vertex;
     this.material.fragmentShader = fragment;
     this.material.needsUpdate = true;
+
+    console.log("FBO Material built:", this.name, fragment);
 
     // Add a bi-unit quad to the scene with the simulation material
     const quadGeometry = new THREE.PlaneGeometry(2, 2);

@@ -20,6 +20,22 @@
       }
     },
     {
+      "filePath": "src/constraints/interactions/index.ts",
+      "outFile": "build/dist/constraints/interactions/index.d.ts",
+      "noCheck": false,
+      "output": {
+        "exportReferencedTypes": false
+      }
+    },
+    {
+      "filePath": "src/constraints/noise/index.ts",
+      "outFile": "build/dist/constraints/noise/index.d.ts",
+      "noCheck": false,
+      "output": {
+        "exportReferencedTypes": false
+      }
+    },
+    {
       "filePath": "src/frames/index.ts",
       "outFile": "build/dist/frames/index.d.ts",
       "noCheck": false,
@@ -30,6 +46,30 @@
     {
       "filePath": "src/index.ts",
       "outFile": "build/dist/index.d.ts",
+      "noCheck": false,
+      "output": {
+        "exportReferencedTypes": false
+      }
+    },
+    {
+      "filePath": "src/plugins/index.ts",
+      "outFile": "build/dist/plugins/index.d.ts",
+      "noCheck": false,
+      "output": {
+        "exportReferencedTypes": false
+      }
+    },
+    {
+      "filePath": "src/plugins/templates/index.ts",
+      "outFile": "build/dist/plugins/templates/index.d.ts",
+      "noCheck": false,
+      "output": {
+        "exportReferencedTypes": false
+      }
+    },
+    {
+      "filePath": "src/plugins/utils/index.ts",
+      "outFile": "build/dist/plugins/utils/index.d.ts",
       "noCheck": false,
       "output": {
         "exportReferencedTypes": false

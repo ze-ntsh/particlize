@@ -1,0 +1,89 @@
+---
+title: CurlNoiseConstraint
+description: A constraint that applies curl noise forces to create fluid-like motion patterns
+---
+
+## Constructor
+
+```typescript
+new CurlNoiseConstraint(name: string, params?: CurlNoiseConstraintParams)
+```
+
+### Parameters
+
+| Parameter | Type                        | Description                    | Default |
+| --------- | --------------------------- | ------------------------------ | ------- |
+| name      | `string`                    | Unique name for the constraint | -       |
+| params    | `CurlNoiseConstraintParams` | Configuration options          | `{}`    |
+
+### CurlNoiseConstraintParams
+
+| Parameter  | Type                              | Description                           | Default    |
+| ---------- | --------------------------------- | ------------------------------------- | ---------- |
+| strength   | `number`                          | Intensity of the curl noise force     | `0.1`      |
+| scale      | `number`                          | Scale of the noise pattern            | `1.0`      |
+| timeScale  | `number`                          | Speed of noise evolution over time    | `1.0`      |
+| property   | `"velocity" \| "position" \| "force"` | Which particle property to affect     | `"velocity"` |
+
+## Properties
+
+| Property | Type                  | Description                        |
+|----------|----------------------|-----------------------------------|
+| name     | `string`             | Unique identifier for the constraint |
+| active   | `boolean`            | Whether the constraint is active   |
+| glsl     | `string`             | Generated GLSL shader code         |
+| uniforms | `Record<string, any>` | Uniform values for the shader     |
+| params   | `Record<string, any>` | Parameter definitions              |
+
+## Methods
+
+### `build(): void`
+
+Processes the constraint's parameters and builds the final GLSL code with proper namespacing.
+
+## Example Usage
+
+```typescript
+import { ParticleSystem, Particle, Frame } from 'particlize';
+import { CurlNoiseConstraint } from 'particlize/constraints';
+
+// Create particle system
+const ps = new ParticleSystem({
+  canvas: document.getElementById('canvas'),
+  fboWidth: 512,
+  fboHeight: 512
+});
+
+// Create particles
+const particles = Array.from({ length: 10000 }, () => new Particle({
+  position: [
+    (Math.random() - 0.5) * 2,
+    (Math.random() - 0.5) * 2,
+    (Math.random() - 0.5) * 2
+  ]
+}));
+
+ps.addParticles(new Frame({ particles }));
+
+// Add curl noise for fluid motion
+ps.manager.constrain('velocity', new CurlNoiseConstraint('fluidFlow', {
+  strength: 0.02,
+  scale: 3.0,
+  timeScale: 0.5
+}));
+
+// Add curl noise affecting position for morphing effects
+ps.manager.constrain('position', new CurlNoiseConstraint('morphing', {
+  strength: 0.01,
+  scale: 5.0,
+  timeScale: 0.2,
+  property: 'position'
+}));
+
+// Animation loop
+function animate() {
+  ps.update();
+  requestAnimationFrame(animate);
+}
+animate();
+```

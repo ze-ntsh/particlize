@@ -1,11 +1,8 @@
-import { getGLSLValue } from "@/utils";
-import * as THREE from "three";
-
 export class Constraint {
   name: string = "";
   active: boolean = true;
   glsl: string = "";
-  params?: Record<string, { value: number | number[]; hardcode?: boolean }> | null = null;
+  params?: Record<string, any>;
   uniforms: Record<string, any> = {};
 
   constructor(name: string, glsl: string = "", uniforms: Record<string, any> = {}) {
@@ -14,7 +11,7 @@ export class Constraint {
     this.uniforms = uniforms;
   }
 
-  protected build() {
+  build() {
     if (!this.params) {
       return;
     }
@@ -23,13 +20,11 @@ export class Constraint {
     for (const [key, param] of Object.entries(this.params)) {
       // The key is #uppercase<key> in the GLSL code
       const glslKey = `#${key.toUpperCase()}`;
-      if (param.hardcode == true || param.hardcode === undefined) {
-        // Replace the placeholder with the actual value
-        glsl = glsl.replace(new RegExp(glslKey, "g"), getGLSLValue(param.value));
-      } else {
-        // Use a uniform variable instead
+
+      // Use a namescoped uniform name for the parameter
+      if (glsl.includes(glslKey)) {
         const uniformName = `u_${this.name}_${key}`;
-        this.uniforms[uniformName] = param.value;
+        this.uniforms[uniformName] = param;
         glsl = glsl.replace(new RegExp(glslKey, "g"), uniformName);
       }
 

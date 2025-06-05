@@ -1,0 +1,102 @@
+---
+title: Plugins
+description: Interface for creating plugins that extend ParticleSystem functionality
+---
+
+## Interface Definition
+
+```typescript
+interface ParticlePlugin {
+  name?: string;
+  description?: string;
+  onInit?(system: ParticleSystem): void;
+  onUpdate?(system: ParticleSystem): void;
+  onDispose?(system: ParticleSystem): void;
+  onAddParticles?(system: ParticleSystem, frame: Frame): void;
+  onMorph?(system: ParticleSystem, frame: Frame): void;
+}
+```
+
+## Properties
+
+| Property    | Type     | Description                                      |
+|-------------|----------|--------------------------------------------------|
+| name        | `string` | Plugin name for identification and debugging    |
+| description | `string` | Brief description of plugin functionality       |
+
+## Methods
+
+### `onInit?(system: ParticleSystem): void`
+
+Called when the plugin is initialized with a ParticleSystem.
+
+### `onUpdate?(system: ParticleSystem): void`
+
+Called every frame during system updates.
+
+### `onDispose?(system: ParticleSystem): void`
+
+Called when the ParticleSystem is disposed.
+
+### `onAddParticles?(system: ParticleSystem, frame: Frame): void`
+
+Called when particles are added to the system.
+
+### `onMorph?(system: ParticleSystem, frame: Frame): void`
+
+Called when particles are morphed in the system.
+
+## Example Usage
+
+```typescript
+import { ParticlePlugin, ParticleSystem, Frame } from 'particlize';
+
+// Basic plugin implementation
+class LoggingPlugin implements ParticlePlugin {
+  name = 'LoggingPlugin';
+  description = 'Logs particle system events';
+
+  onInit(system: ParticleSystem) {
+    console.log('Plugin initialized with system:', system.uuid);
+  }
+
+  onUpdate(system: ParticleSystem) {
+    console.log('System updated. Particle count:', system.particleCount);
+  }
+
+  onAddParticles(system: ParticleSystem, frame: Frame) {
+    console.log('Added particles from frame:', frame.particles.length);
+  }
+
+  onDispose(system: ParticleSystem) {
+    console.log('System disposed:', system.uuid);
+  }
+}
+
+// Performance monitoring plugin
+class PerformancePlugin implements ParticlePlugin {
+  name = 'PerformancePlugin';
+  private lastFrameTime = 0;
+
+  onUpdate(system: ParticleSystem) {
+    const now = performance.now();
+    const deltaTime = now - this.lastFrameTime;
+    
+    if (deltaTime > 16.67) { // > 60fps threshold
+      console.warn(`Frame time: ${deltaTime.toFixed(2)}ms`);
+    }
+    
+    this.lastFrameTime = now;
+  }
+}
+
+// Use plugins with ParticleSystem
+const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+const system = new ParticleSystem({
+  canvas,
+  plugins: [
+    new LoggingPlugin(),
+    new PerformancePlugin()
+  ]
+});
+```

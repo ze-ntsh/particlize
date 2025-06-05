@@ -1,4 +1,3 @@
 {
-  "title": "Particlize",
-  "pages": ["index", "installation", "api"]
+  "pages": ["--- Introduction ---", "index", "--- Examples ---", "...examples", "--- API Reference ---", "...api"]
 }

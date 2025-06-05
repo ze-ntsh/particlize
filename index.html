@@ -18,37 +18,65 @@
 
   <script type="module">
     import { ParticleSystem, Particle } from "./src";
-    import { SamplerFrame, Frame } from "./src/frames";
-    import { textToMesh } from "./src/utils";
-    import { MeshSurfaceSampler } from "./src/samplers";
+    import { Frame } from "./src/frames";
     import { BasicConstraintsPlugin } from "./src/plugins/templates";
-    import * as THREE from "three";
-    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { MouseRadialConstraint } from "./src/constraints/interactions";
+    import { CurlNoiseConstraint } from "./src/constraints/noise";
+    import { RaycasterPlugin } from "./src/plugins/utils";
 
     const canvas = document.getElementById("particle-canvas");
-
     const ps = new ParticleSystem({
       canvas: canvas,
       preWarm: true,
       fboHeight: 512,
       fboWidth: 512,
-      backgroundColor: [0.001, 0.001, 0.005, 1],
-      plugins: [new BasicConstraintsPlugin()],
+      backgroundColor: [0.001, 0.001, 0.01, 1], // Darker space-like background
+      plugins: [new BasicConstraintsPlugin(), new RaycasterPlugin()],
     });
 
-    ps.addParticles(
-      new SamplerFrame({
-        sampler: new MeshSurfaceSampler(new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.2, 16, 100), new THREE.MeshBasicMaterial({ color: 0x00ff00 }))),
-        count: 100000,
+    // Create grid of particles
+    ps.manager.constrain(
+      "velocity",
+      new MouseRadialConstraint("mouseRepelConstraint", {
+        strength: 100,
+        radius: 0.1,
+      })
+    ); // Add curl noise constraint for flowing motion
+    ps.manager.constrain(
+      "velocity",
+      new CurlNoiseConstraint("curlFlow", {
+        strength: 0.5,
+        scale: 3.0,
+        timeScale: 0.5,
       })
     );
 
-    const knotSamplerFrame = new SamplerFrame({
-      sampler: new MeshSurfaceSampler(
-        new THREE.Mesh(new THREE.TorusKnotGeometry(0.4, 0.15, 100, 32, 3, 4), new THREE.MeshBasicMaterial({ color: 0x00ffff }))
-      ),
-      count: 100000,
-    });
+    const particles = [];
+
+    for (let i = 0; i < 1000; i++) {
+      x = Math.random() - 1;
+      y = Math.random() - 1;
+      z = Math.random() - 1;
+
+      const p = new Particle({
+        position: new Float32Array([x, y, z]),
+        origin: new Float32Array([x, y, z]),
+        color: new Float32Array([
+          Math.random() * 0.5 + 0.5, // R
+          Math.random() * 0.5 + 0.5, // G
+          Math.random() * 0.5 + 0.5, // B
+          1,
+        ]),
+      });
+
+      particles.push(p);
+    }
+
+    ps.addParticles(
+      new Frame({
+        particles: particles,
+      })
+    );
 
     const animate = () => {
       requestAnimationFrame(animate);
@@ -56,9 +84,5 @@
     };
 
     animate();
-
-    setTimeout(() => {
-      ps.morphTo(knotSamplerFrame);
-    }, 5000);
   </script>
 </html>

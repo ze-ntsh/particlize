@@ -1,23 +1,17 @@
 import { deepMerge } from "@/utils";
-import { Constraint } from "../Constraint";
+import { Constraint } from "@/constraints";
 
 // Types
 type RadialForceParams = {
-  center?: {
-    value: [number, number, number];
-    hardcode?: boolean;
-  };
-  strength?: {
-    value: [number, number, number];
-    hardcode?: boolean;
-  };
+  center?: [number, number, number];
+  strength?: [number, number, number];
 };
 
 export class RadialForce extends Constraint {
   // Default parameters
   static readonly defaultParams: RadialForceParams = {
-    center: { value: [0, 0, 0], hardcode: false },
-    strength: { value: [0, 0, 0], hardcode: false },
+    center: [0, 0, 0],
+    strength: [0, 0, 0],
   };
 
   constructor(name: string, params: RadialForceParams) {
@@ -30,7 +24,7 @@ export class RadialForce extends Constraint {
       force += dir@ * #STRENGTH * mass / (dist@ * dist@);
       `
     );
-    this.params = deepMerge(RadialForce.defaultParams, params) as RadialForceParams;
+    this.params = { ...RadialForce.defaultParams, ...params };
     this.build();
   }
 }

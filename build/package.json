@@ -1,0 +1,69 @@
+{
+  "name": "particlize-js",
+  "version": "0.0.0",
+  "type": "module",
+  "devDependencies": {
+    "@types/three": "^0.176.0",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "three": "^0.176.0"
+  },
+  "exports": {
+    "./constraints/forces": {
+      "import": "./dist/constraints/forces/index.js",
+      "require": "./dist/constraints/forces/index.cjs",
+      "types": "./dist/constraints/forces/index.d.ts"
+    },
+    "./constraints": {
+      "import": "./dist/constraints/index.js",
+      "require": "./dist/constraints/index.cjs",
+      "types": "./dist/constraints/index.d.ts"
+    },
+    "./constraints/interactions": {
+      "import": "./dist/constraints/interactions/index.js",
+      "require": "./dist/constraints/interactions/index.cjs",
+      "types": "./dist/constraints/interactions/index.d.ts"
+    },
+    "./constraints/noise": {
+      "import": "./dist/constraints/noise/index.js",
+      "require": "./dist/constraints/noise/index.cjs",
+      "types": "./dist/constraints/noise/index.d.ts"
+    },
+    "./frames": {
+      "import": "./dist/frames/index.js",
+      "require": "./dist/frames/index.cjs",
+      "types": "./dist/frames/index.d.ts"
+    },
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./plugins": {
+      "import": "./dist/plugins/index.js",
+      "require": "./dist/plugins/index.cjs",
+      "types": "./dist/plugins/index.d.ts"
+    },
+    "./plugins/templates": {
+      "import": "./dist/plugins/templates/index.js",
+      "require": "./dist/plugins/templates/index.cjs",
+      "types": "./dist/plugins/templates/index.d.ts"
+    },
+    "./plugins/utils": {
+      "import": "./dist/plugins/utils/index.js",
+      "require": "./dist/plugins/utils/index.cjs",
+      "types": "./dist/plugins/utils/index.d.ts"
+    },
+    "./samplers": {
+      "import": "./dist/samplers/index.js",
+      "require": "./dist/samplers/index.cjs",
+      "types": "./dist/samplers/index.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils/index.js",
+      "require": "./dist/utils/index.cjs",
+      "types": "./dist/utils/index.d.ts"
+    }
+  }
+}

@@ -1,23 +1,17 @@
-import { deepMerge } from "@/utils";
-import { Constraint } from "../Constraint";
+import { Constraint } from "@/constraints";
 
 // Types
 export type DirectionalForceParams = {
-  strength: {
-    value: [number, number, number];
-    hardcode?: boolean;
-  };
+  strength: [number, number, number];
 };
 
 export class DirectionalForce extends Constraint {
   // Default parameters
   static readonly defaultParams: DirectionalForceParams = {
-    strength: { value: [0, 0, 0], hardcode: false },
+    strength: [0, 0, 0],
   };
 
   constructor(name: string, params: DirectionalForceParams) {
-    params = deepMerge(DirectionalForce.defaultParams, params) as DirectionalForceParams;
-
     super(
       name,
       /*glsl*/ `
@@ -25,7 +19,7 @@ export class DirectionalForce extends Constraint {
       `
     );
 
-    this.params = params;
+    this.params = { ...DirectionalForce.defaultParams, ...params };
     this.build();
   }
 }
