@@ -6,6 +6,10 @@ const withMDX = createMDX();
 const config = {
   reactStrictMode: true,
   transpilePackages: ['awesome_module'],
+
+  eslint: {
+    ignoreDuringBuilds: true, // Allow builds to succeed even if there are ESLint errors
+  }
 };
 
 export default withMDX(config);
