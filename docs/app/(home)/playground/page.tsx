@@ -14,28 +14,28 @@ import { Tweakpane } from "@/lib/components/Tweakpane";
 export default function PlaygroundPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useLayoutEffect(() => {
-    if (!canvasRef.current) return;
+  // useLayoutEffect(() => {
+  //   if (!canvasRef.current) return;
 
-    const ps = new ParticleSystem({
-      canvas: canvasRef.current,
-      fboHeight: 512,
-      fboWidth: 512,
-      backgroundColor: [0, 0, 0, 1], // Darker space-like background
-      plugins: [new BasicConstraintsPlugin(), new RaycasterPlugin()],
-    }); // Create grid of particles
+  //   const ps = new ParticleSystem({
+  //     canvas: canvasRef.current,
+  //     fboHeight: 512,
+  //     fboWidth: 512,
+  //     backgroundColor: [0, 0, 0, 1], // Darker space-like background
+  //     plugins: [new BasicConstraintsPlugin(), new RaycasterPlugin()],
+  //   }); // Create grid of particles
 
-    const animate = () => {
-      requestAnimationFrame(animate);
-      ps.update();
-    };
+  //   const animate = () => {
+  //     requestAnimationFrame(animate);
+  //     ps.update();
+  //   };
 
-    animate();
+  //   animate();
 
-    return () => {
-      ps.dispose();
-    };
-  }, []);
+  //   return () => {
+  //     ps.dispose();
+  //   };
+  // }, []);
 
   return (
     <main className="flex flex-1 flex-col justify-center text-center relative">

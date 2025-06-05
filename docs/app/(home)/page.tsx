@@ -3,11 +3,8 @@
 import { Particle, ParticleSystem } from "particlize-js";
 import { BasicConstraintsPlugin } from "particlize-js/plugins/templates";
 import { RaycasterPlugin } from "particlize-js/plugins/utils";
-import * as THREE from "three";
 import { useLayoutEffect, useRef } from "react";
 import { Frame } from "particlize-js/frames";
-import { EffectComposer, EffectPass, RenderPass, ScanlineEffect } from "postprocessing";
-import { Constraint } from "particlize-js/constraints";
 import { MouseRadialConstraint } from "particlize-js/constraints/interactions";
 import { CurlNoiseConstraint } from "particlize-js/constraints/noise";
 
